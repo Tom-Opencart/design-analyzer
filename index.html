@@ -201,11 +201,11 @@ function analyzeData(url, doc, textData) {
     const txR = /(?:^|;)\s*color\s*:\s*#([0-9a-f]{6})/gim; while ((m = txR.exec(textData)) !== null) txtSet.add('#'+m[1].toLowerCase());
     const brR = /border[^:]*:\s*[^;]*#([0-9a-f]{6})/gi; while ((m = brR.exec(textData)) !== null) brdSet.add('#'+m[1].toLowerCase());
 
-    const canvasHex = finalColors.length > 0 ? finalColors[0][0] : '#ffffff';
+    const canvasHex = (finalColors.find(([h]) => h === '#ffffff' || h === '#000000') || finalColors[0])[0];
     const canvasLum = luminance(...Object.values(hexToRgb(canvasHex)));
     const isDark = canvasLum < 0.1;
 
-    const accentColorsRaw = finalColors.filter(([hex]) => { const l = luminance(...Object.values(hexToRgb(hex))); return l > 0.08 && l < 0.92 && hex !== canvasHex && (bgSet.has(hex) || txtSet.has(hex) || brdSet.has(hex)); }).slice(0, 7);
+    const accentColorsRaw = finalColors.filter(([hex]) => { const l = luminance(...Object.values(hexToRgb(hex))); const {r,g,b} = hexToRgb(hex); const max = Math.max(r,g,b), min = Math.min(r,g,b); const s = max === 0 ? 0 : (max-min)/max; return s > 0.15 && l > 0.08 && l < 0.92 && hex !== canvasHex && (bgSet.has(hex) || txtSet.has(hex) || brdSet.has(hex)); }).slice(0, 7);
     const seenLabels = new Set();
     const accentColors = accentColorsRaw.filter(([hex]) => !seenLabels.has(colorLabel(hex)) && seenLabels.add(colorLabel(hex)));
     const surfaceColors = finalColors.filter(([hex]) => { const l = luminance(...Object.values(hexToRgb(hex))); return hex === '#ffffff' || hex === '#000000' || (l > 0.85 && l < 0.99 && !txtSet.has(hex)) || (l > 0.01 && l < 0.12 && hex !== canvasHex); }).slice(0, 5);
@@ -239,7 +239,10 @@ function analyzeData(url, doc, textData) {
         const g = sizeGroups[r.sizePx];
         g.count++;
         if (r.weight > 0) g.weights[r.weight] = (g.weights[r.weight] || 0) + 1;
-        if (r.lineHeight > 0) g.lh.push(r.lineHeight);
+        if (r.lineHeight > 0) {
+            const lhFixed = r.lineHeight > 5 ? Math.round(r.lineHeight / r.sizePx * 100) / 100 : r.lineHeight;
+            g.lh.push(lhFixed);
+        }
         if (r.letterSpacing) g.ls.push(r.letterSpacing);
     });
     let topSizes = Object.entries(sizeGroups).map(([px, g]) => {
