@@ -144,7 +144,14 @@ function colorLabel(hex) {
     } catch(e) { return 'Unknown'; }
 }
 function radiusToken(px) { if (px === 0) return 'none'; if (px <= 2) return 'xs'; if (px <= 4) return 'sm'; if (px <= 6) return 'md'; if (px <= 8) return 'lg'; if (px <= 12) return 'xl'; if (px <= 16) return 'xxl'; if (px <= 32) return 'xxxl'; return 'pill'; }
-function spacingName(px) { const m = {0:'none',2:'xxs',4:'xs',6:'s',8:'sm',10:'m',12:'md',16:'lg',20:'xl',24:'xxl',28:'xxl',32:'xxxl',36:'xxxl',40:'section-sm',48:'section',56:'section',64:'section-lg',72:'section-lg',80:'section-xl',96:'section-xxl',120:'section-xxxl'}; if (m[px] !== undefined) return m[px]; for (const [k, v] of Object.entries(m)) { if (Math.abs(+k - px) <= 2) return v; } return px + 'px'; }
+function spacingName(px) {
+    const scale = [0, 2, 4, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48, 56, 64, 80, 96, 120];
+    const nearest = scale.reduce((a, b) => Math.abs(b - px) < Math.abs(a - px) ? b : a);
+    const names = ['none', 'xxs', 'xs', 's', 'sm', 'm', 'md', 'lg', 'xl', 'xxl', 'xxxl', 'xxxxl', 'section-sm', 'section', 'section-lg', 'section-xl', 'section-xxl', 'section-xxxl'];
+    const idx = scale.indexOf(nearest);
+    if (Math.abs(nearest - px) <= 2) return names[idx];
+    return 'spacing-' + px;
+}
 const ICON_FONTS = ['font awesome', 'fontawesome', 'material icons', 'glyphicon', 'ionicon', 'dashicon', 'genericon', 'octicons', 'elusive', 'foundation-icons', 'fa-', 'fi-', 'glyph', 'material-'];
 function isIconFont(name) { const n = name.toLowerCase().replace(/["']/g, ''); return ICON_FONTS.some(f => n.includes(f)); }
 
@@ -283,31 +290,59 @@ function analyzeData(url, doc, textData) {
     const tabs = doc.querySelectorAll('[class*="tab"], [role="tablist"]');
     const breadcrumbs = doc.querySelectorAll('[class*="breadcrumb"], [aria-label*="breadcrumb"]');
 
-    // -- Component style extraction --
-    function extractCompStyles(selectorPattern) {
-        const matches = cssRules.filter(r => r.selector.includes(selectorPattern));
-        if (matches.length === 0) return null;
-        const heights = matches.map(r => { const h = r.body.match(/height\s*:\s*(\d+)px/i); return h ? +h[1] : 0; }).filter(h => h > 0 && h < 200);
-        const paddings = matches.map(r => { const p = r.body.match(/padding\s*:\s*([\d]+\s*[\d]*)/i); return p ? p[1].trim() : ''; }).filter(Boolean);
-        const avgH = heights.length > 0 ? Math.round(heights.reduce((a,b)=>a+b,0) / heights.length) : 0;
-        return { count: matches.length, avgHeight: avgH, paddings: [...new Set(paddings)].slice(0,3) };
+    // -- Component style extraction (stricter selectors, height via padding fallback) --
+    function extractCompStyles(patterns) {
+        for (const pat of patterns) {
+            const esc = pat.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const regex = new RegExp('(^|[^a-z-])' + esc + '($|[^a-z-])', 'i');
+            const matches = cssRules.filter(r => regex.test(r.selector));
+            if (matches.length >= 3) {
+                const heights = matches.map(r => {
+                    const h = r.body.match(/height\s*:\s*(\d+)px/i);
+                    if (h) return +h[1];
+                    const p = r.body.match(/padding\s*:\s*(\d+)px\s+(\d+)px/i);
+                    if (p) return +p[1] * 2 + 16;
+                    const ph = r.body.match(/padding\s*:\s*(\d+)px/i);
+                    if (ph) return +ph[1] * 2 + 16;
+                    return 0;
+                }).filter(h => h > 0 && h < 200);
+                const paddings = matches.map(r => { const p = r.body.match(/padding\s*:\s*([\d]+\s*[\d]*)/i); return p ? p[1].trim() : ''; }).filter(Boolean);
+                const avgH = heights.length > 0 ? Math.round(heights.reduce((a,b)=>a+b,0) / heights.length) : 0;
+                return { count: matches.length, avgHeight: avgH, paddings: [...new Set(paddings)].slice(0,3), matches };
+            }
+        }
+        return null;
     }
-    const btnStyles = extractCompStyles('button') || extractCompStyles('.btn') || extractCompStyles('[class*="button"]');
-    const inputStyles = extractCompStyles('input') || extractCompStyles('.form-');
-    const cardStyles = extractCompStyles('card') || extractCompStyles('[class*="card"]');
+    const btnStyles = extractCompStyles(['button', 'btn']);
+    const inputStyles = extractCompStyles(['input', 'form-control']);
+    const cardStyles = extractCompStyles(['card']);
 
-    // -- Component variant detection --
+    // -- Component variant detection with type classification --
     function detectVariants(basePattern) {
         const found = [];
         const patterns = ['active', 'disabled', 'outline', 'ghost', 'secondary', 'small', 'large', 'danger', 'warning', 'success', 'link', 'text', 'icon', 'filled'];
         for (const p of patterns) {
-            const matches = cssRules.filter(r => r.selector.toLowerCase().includes(basePattern) && r.selector.toLowerCase().includes(p));
-            if (matches.length >= 1) found.push(p);
+            const esc = basePattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const regex = new RegExp('(^|[^a-z-])' + esc + '(.*[^a-z-])?' + p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+            const matches = cssRules.filter(r => regex.test(r.selector));
+            if (matches.length >= 1) found.push({ name: p, count: matches.length });
         }
         return found;
     }
     const btnVariants = detectVariants('button');
     const cardVariants = detectVariants('card');
+
+    function classifyButtonTypes(btnVariants, btnStyles) {
+        const types = [];
+        if (btnVariants.some(v => v.name === 'outline')) types.push('outline');
+        if (btnVariants.some(v => v.name === 'secondary')) types.push('secondary');
+        if (btnVariants.some(v => v.name === 'text') || btnVariants.some(v => v.name === 'ghost') || btnVariants.some(v => v.name === 'link')) types.push('text');
+        if (btnVariants.some(v => v.name === 'icon')) types.push('icon');
+        if (btnVariants.some(v => v.name === 'small') || btnVariants.some(v => v.name === 'large')) types.push('sized');
+        if (btnVariants.some(v => v.name === 'danger') || btnVariants.some(v => v.name === 'warning')) types.push('semantic');
+        return types;
+    }
+    const btnTypes = classifyButtonTypes(btnVariants, btnStyles);
 
     const displayColor = isDark ? (textColors.length>0 ? textColors[0][0] : '#ffffff') : (textColors.length>0 && luminance(...Object.values(hexToRgb(textColors[0][0]))) < 0.15 ? textColors[0][0] : '#1a1a1a');
     const primaryAccent = accentColors.length > 0 ? accentColors[0] : null;
@@ -357,8 +392,7 @@ function analyzeData(url, doc, textData) {
     let surfIdx = 0;
     surfaceColors.filter(([h]) => h !== canvasHex && h !== '#ffffff' && h !== '#000000').slice(0, 3).forEach(([hex]) => {
         const l = luminance(...Object.values(hexToRgb(hex)));
-        const names = ['Surface Soft', 'Surface Elevated', 'Surface Card'];
-        const name = surfIdx < names.length ? names[surfIdx] : 'Surface ' + (surfIdx + 1);
+        const name = l < 0.15 ? 'Surface Dark' : l > 0.85 ? 'Surface Light' : 'Surface Mid';
         const use = l < 0.15 ? 'Dark card panels, footer bands' : l > 0.85 ? 'Alternating section bands, hover states' : 'Mid-surface card backgrounds';
         md += '- **' + name + '** (`{colors.surface' + (surfIdx > 0 ? '-' + (surfIdx + 1) : '') + '}` — `' + hex + '`): ' + use + '.\n';
         surfIdx++;
@@ -461,7 +495,13 @@ function analyzeData(url, doc, textData) {
         const h = btnStyles && btnStyles.avgHeight > 0 ? btnStyles.avgHeight + 'px' : 'auto';
         compDescs.push('- **`button-primary`**: ' + btns.length + ' buttons on page. Height ~' + h + ', rounded `{rounded.sm}`, padding `{spacing.sm} {spacing.lg}`.');
         if (btnVariants.length > 0) {
-            compDescs.push('  - Variants detected: ' + btnVariants.map(v => '`-' + v + '`').join(', '));
+            compDescs.push('  - Variants detected: ' + btnVariants.map(v => '`-' + v.name + '`').join(', '));
+        }
+        if (btnTypes.length > 0) {
+            if (btnTypes.includes('outline')) compDescs.push('- **`button-outline`**: Outlined variant — transparent background with `{colors.primary}` border.');
+            if (btnTypes.includes('secondary')) compDescs.push('- **`button-secondary`**: Secondary variant — `{colors.surface}` background.');
+            if (btnTypes.includes('text')) compDescs.push('- **`button-text`**: Text-only/ghost variant — no fill, no border, `{colors.primary}` text.');
+            if (btnTypes.includes('icon')) compDescs.push('- **`button-icon`**: Icon-only circular variant — `{rounded.pill}`.');
         }
     }
     if (inputs.length > 0) {
