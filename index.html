@@ -296,6 +296,19 @@ function analyzeData(url, doc, textData) {
     const inputStyles = extractCompStyles('input') || extractCompStyles('.form-');
     const cardStyles = extractCompStyles('card') || extractCompStyles('[class*="card"]');
 
+    // -- Component variant detection --
+    function detectVariants(basePattern) {
+        const found = [];
+        const patterns = ['active', 'disabled', 'outline', 'ghost', 'secondary', 'small', 'large', 'danger', 'warning', 'success', 'link', 'text', 'icon', 'filled'];
+        for (const p of patterns) {
+            const matches = cssRules.filter(r => r.selector.toLowerCase().includes(basePattern) && r.selector.toLowerCase().includes(p));
+            if (matches.length >= 1) found.push(p);
+        }
+        return found;
+    }
+    const btnVariants = detectVariants('button');
+    const cardVariants = detectVariants('card');
+
     const displayColor = isDark ? (textColors.length>0 ? textColors[0][0] : '#ffffff') : (textColors.length>0 && luminance(...Object.values(hexToRgb(textColors[0][0]))) < 0.15 ? textColors[0][0] : '#1a1a1a');
     const primaryAccent = accentColors.length > 0 ? accentColors[0] : null;
 
@@ -445,15 +458,23 @@ function analyzeData(url, doc, textData) {
     if (navEl) { const navLinks = navEl.querySelectorAll('a').length; compDescs.push('- **`nav-bar-top`**: Navigation bar with ' + navLinks + ' links, pinned to top. Background `{colors.canvas}`.'); }
     if (headerEl && headerEl !== navEl) { compDescs.push('- **`header`**: Page header with logo mark and primary CTAs.'); }
     if (btns.length > 0) {
-        const h = btnStyles && btnStyles.avgHeight > 0 ? btnStyles.avgHeight + ' × auto' : 'auto';
-        compDescs.push('- **`button-primary`**: ' + btns.length + ' buttons on page. Height ~' + h + 'px, rounded `{rounded.sm}`, padding `{spacing.sm} {spacing.lg}`.');
+        const h = btnStyles && btnStyles.avgHeight > 0 ? btnStyles.avgHeight + 'px' : 'auto';
+        compDescs.push('- **`button-primary`**: ' + btns.length + ' buttons on page. Height ~' + h + ', rounded `{rounded.sm}`, padding `{spacing.sm} {spacing.lg}`.');
+        if (btnVariants.length > 0) {
+            compDescs.push('  - Variants detected: ' + btnVariants.map(v => '`-' + v + '`').join(', '));
+        }
     }
     if (inputs.length > 0) {
         const h = inputStyles && inputStyles.avgHeight > 0 ? inputStyles.avgHeight + 'px' : 'auto';
         const types = [...new Set([...inputs].map(i => i.type || i.tagName.toLowerCase()))].join(', ');
         compDescs.push('- **`text-input`**: ' + inputs.length + ' fields (types: ' + types + '). Height ' + h + ', rounded `{rounded.sm}`.');
     }
-    if (imgs.length > 0) compDescs.push('- **`card-product`**: ' + imgs.length + ' images. ' + (cardStyles ? 'Cards with rounded `{rounded.lg}` and Soft Lift shadow.' : ''));
+    if (imgs.length > 0) {
+        compDescs.push('- **`card-product`**: ' + imgs.length + ' images. ' + (cardStyles ? 'Cards with rounded `{rounded.' + radiusToken(topRadii.find(([px])=>px>=8)||[8])[0] + '}` and Soft Lift shadow.' : ''));
+        if (cardVariants.length > 0) {
+            compDescs.push('  - Card variants detected: ' + cardVariants.map(v => '`-' + v + '`').join(', '));
+        }
+    }
     if (sliders.length > 0) compDescs.push('- **`carousel`**: ' + sliders.length + ' carousel/slider instances.');
     if (modals.length > 0) compDescs.push('- **`modal-overlay`**: ' + modals.length + ' overlay dialogs.');
     if (forms.length > 0) compDescs.push('- **`form`**: ' + forms.length + ' form(s) on page.');
@@ -496,7 +517,16 @@ function analyzeData(url, doc, textData) {
         md += '| Tablet | 768–1024px | 2-3 column grid, adapted typography |\n';
         md += '| Desktop | > 1024px | Full layout, max-width ' + (topWidths[0] ? topWidths[0][0] : '1440px') + ' |\n';
     }
-    md += '\n### Touch Targets\nAll interactive elements (buttons, inputs, links) maintain minimum 44×44px touch area for WCAG compliance.\n\n';
+    md += '\n### Touch Targets\nAll interactive elements (buttons, inputs, links) maintain minimum 44×44px touch area for WCAG compliance.\n';
+    md += '\n### Collapsing Strategy\n';
+    if (navEl) md += '- **Top nav**: collapses to hamburger menu below ' + (bps[0] || '768') + 'px\n';
+    if (forms.length > 0) md += '- **Forms**: single-column stack on mobile, inline fields on desktop\n';
+    if (imgs.length > 0) md += '- **Images**: responsive scaling with native aspect ratio preservation\n';
+    if (sliders.length > 0) md += '- **Carousels**: touch-swipe enabled on mobile, arrow/pagination on desktop\n';
+    md += '- **Grid**: columns reduce proportionally across breakpoints rather than scaling cards down\n';
+    md += '- **Typography**: type scale compresses ~20-30% at mobile breakpoints\n';
+    md += '\n### Image Behavior\n';
+    md += 'Responsive images maintain native aspect ratios via `object-fit` or `max-width: 100%`. ' + (topRadii.length > 0 && topRadii[0][0] > 0 ? 'Rounded corners (`{rounded.' + radiusToken(topRadii[0][0]) + '}`) persist at every breakpoint.' : 'Sharp corners persist at every breakpoint.') + '\n\n';
 
     // -- Iteration Guide --
     md += '## Iteration Guide\n\n';
@@ -506,6 +536,51 @@ function analyzeData(url, doc, textData) {
     md += '4. Keep `{colors.primary}` scarce — at most two flame elements per viewport.\n';
     md += '5. When introducing a new section band, choose from the defined surface tokens.\n';
     md += '6. Default body to `{typography.body-md}`; reach for display sizes only at section-heading level.\n\n';
+
+    // -- Token Relationships --
+    const relationships = [];
+    const allColors = [...finalColors.map(([h]) => h)];
+    for (const hex of allColors) {
+        if (bgSet.has(hex) && brdSet.has(hex)) {
+            relationships.push('- `{colors.' + colorLabel(hex).toLowerCase().replace(/[\s/]+/g,'-') + '}` (`' + hex + '`) doubles as both **surface fill** and **border color** — no separate hairline token needed.');
+            break;
+        }
+    }
+    if (accentColors.length >= 2) {
+        const a1 = accentColors[0][0], a2 = accentColors[1][0];
+        const d = colorDist(a1, a2);
+        if (d < 60 && d > 10) {
+            relationships.push('- `' + a1 + '` and `' + a2 + '` are **close variants** (Δ=' + d + ') — likely primary/pressed or primary/hover pair.');
+        }
+    }
+    const surfaceHexes = surfaceColors.filter(([h]) => h !== canvasHex).map(([h]) => h);
+    const borderHexesArr = [...brdSet];
+    for (const sh of surfaceHexes) {
+        if (borderHexesArr.includes(sh)) {
+            relationships.push('- `{colors.hairline}` (`' + sh + '`) equals a surface token — borders feel like one-step elevations rather than ink lines.');
+            break;
+        }
+    }
+    if (relationships.length > 0) {
+        md += '## Token Relationships\n\n';
+        relationships.forEach(r => md += r + '\n');
+        md += '\n';
+    }
+
+    // -- Known Gaps --
+    md += '## Known Gaps\n\n';
+    const gaps = [];
+    gaps.push('- Hover, focus, and active states are not extracted — CSS pseudo-class analysis requires runtime evaluation.');
+    gaps.push('- Animation and transition timings (carousel transitions, hover-reveal effects, accordion animations) are out of scope.');
+    gaps.push('- Form validation states (error/success input variants) are not extracted from static CSS alone.');
+    if (!modals.length) gaps.push('- No modal or overlay dialogs detected — popup/drawer components may exist but were not captured.');
+    if (navEl && !doc.querySelector('[class*="mobile"],[class*="hamburger"],[class*="burger"]')) gaps.push('- Mobile navigation pattern (hamburger menu, drawer) not detected — responsive nav behavior may differ from static analysis.');
+    const authenticatedPages = doc.querySelectorAll('[class*="account"],[class*="login"],[class*="dashboard"]');
+    if (!authenticatedPages.length) gaps.push('- Authenticated pages (account, dashboard, checkout) were not analyzed — their component set may include additional patterns.');
+    const darkModeToggle = doc.querySelectorAll('[class*="dark-mode"],[class*="theme-toggle"]');
+    if (!darkModeToggle.length && !isDark) gaps.push('- Dark mode variant not captured — if the site has a dark theme toggle, its tokens are missing.');
+    gaps.push('- The analysis is based on the top ' + cssRules.length + ' CSS rules from up to 5 stylesheets. Inline styles, shadow DOM, and dynamically injected CSS are not captured.');
+    gaps.forEach(g => md += g + '\n');
 
     return md;
 }
