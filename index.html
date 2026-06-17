@@ -236,10 +236,24 @@ function analyzeData(url, doc, textData) {
     });
     const topSizes = Object.entries(sizeGroups).map(([px, g]) => {
         const topW = Object.entries(g.weights).sort((a,b) => b[1]-a[1]);
-        const avgLh = g.lh.length > 0 ? (g.lh.reduce((a,b) => a+b, 0) / g.lh.length) : 0;
+        const avgLh = g.lh.length > 0 ? g.lh.sort((a,b)=>a-b)[Math.floor(g.lh.length/2)] : 0;
         const topLs = g.ls.length > 0 ? g.ls.sort((a,b) => g.ls.filter(x=>x===b).length - g.ls.filter(x=>x===a).length)[0] : '';
         return { px: +px, count: g.count, weight: topW.length > 0 ? +topW[0][0] : 0, lineHeight: Math.round(avgLh * 100) / 100, letterSpacing: topLs };
     }).filter(s => s.count >= 3).sort((a,b) => b.px - a.px).slice(0, 10);
+
+    if (topSizes.length === 0) {
+        topSizes = [
+            { px: 48, count: 1, weight: 700, lineHeight: 1.0, letterSpacing: '' },
+            { px: 36, count: 1, weight: 700, lineHeight: 1.1, letterSpacing: '' },
+            { px: 28, count: 1, weight: 600, lineHeight: 1.2, letterSpacing: '' },
+            { px: 24, count: 1, weight: 600, lineHeight: 1.2, letterSpacing: '' },
+            { px: 20, count: 1, weight: 500, lineHeight: 1.3, letterSpacing: '' },
+            { px: 18, count: 1, weight: 400, lineHeight: 1.4, letterSpacing: '' },
+            { px: 16, count: 1, weight: 400, lineHeight: 1.5, letterSpacing: '' },
+            { px: 14, count: 1, weight: 400, lineHeight: 1.5, letterSpacing: '' },
+            { px: 12, count: 1, weight: 400, lineHeight: 1.4, letterSpacing: '' }
+        ];
+    }
 
     const allWeights = [...new Set(cssRules.map(r => r.weight).filter(w => w > 0))].sort((a,b) => a - b);
 
@@ -266,7 +280,7 @@ function analyzeData(url, doc, textData) {
     spM.forEach(s => { s.replace(/(?:margin|padding)\s*:\s*/,'').split(/\s+/).forEach(v => { const raw = parseFloat(v); if (isNaN(raw) || raw <= 0 || raw > 140) return; const px = standardSp.reduce((prev, curr) => Math.abs(curr - raw) < Math.abs(prev - raw) ? curr : prev); spVals.add(px); }); });
     const sortedSpacing = [...spVals].sort((a,b)=>a-b).filter(v=>v>0);
 
-    const mqRegex = /@media\s*\([^)]*width\s*[<>]=?\s*(\d+)px/g;
+    const mqRegex = /@media[^{]*?(?:min|max)?-?width\s*[:(<>]=?\s*(\d+)px/gi;
     const mqM = textData.match(mqRegex) || [];
     const bps = [...new Set(mqM.map(m=>{const n=m.match(/(\d+)px/);return n?+n[1]:null;}))].filter(Boolean).sort((a,b)=>a-b);
 
@@ -415,6 +429,35 @@ function analyzeData(url, doc, textData) {
             md += '- **' + label + '** (`{colors.hairline' + (i > 0 ? '-strong' : '') + '}` — `' + hex + '`): 1px dividers between sections, card outlines, table rows.\n';
         });
     } else md += '- **Hairline** (`{colors.hairline}`): 1px dividers between sections, card outlines.\n';
+
+    // -- Semantic colors --
+    const semanticPatterns = [
+        { rx: /error|danger|fail|destructive|red/i, name: 'Error', token: 'danger' },
+        { rx: /warn|caution|alert/i, name: 'Warning', token: 'warning' },
+        { rx: /success|confirm|valid|green/i, name: 'Success', token: 'success' },
+        { rx: /info|neutral|hint/i, name: 'Info', token: 'info' }
+    ];
+    const semanticMatches = [];
+    for (const sp of semanticPatterns) {
+        const matchedRules = cssRules.filter(r => sp.rx.test(r.selector));
+        if (matchedRules.length >= 2) {
+            const hexes = new Set();
+            matchedRules.forEach(r => {
+                const hexM = r.body.match(/#([0-9a-f]{6})/gi);
+                if (hexM) hexM.forEach(h => hexes.add(h.toLowerCase()));
+            });
+            const relevantHexes = [...hexes].filter(h => !surfaceColors.some(([s]) => s === h) && h !== canvasHex && bgSet.has(h) || txtSet.has(h)).slice(0, 2);
+            relevantHexes.forEach(hex => {
+                semanticMatches.push({ name: sp.name, token: sp.token, hex });
+            });
+        }
+    }
+    if (semanticMatches.length > 0) {
+        md += '\n### Semantic\n';
+        semanticMatches.forEach(s => {
+            md += '- **' + s.name + '** (`{colors.' + s.token + '}` — `' + s.hex + '`): ' + s.name.toLowerCase() + ' state indicator.\n';
+        });
+    }
     md += '\n';
 
     // -- Typography --
@@ -512,7 +555,12 @@ function analyzeData(url, doc, textData) {
     if (imgs.length > 0) {
         compDescs.push('- **`card-product`**: ' + imgs.length + ' images. ' + (cardStyles ? 'Cards with rounded `{rounded.' + radiusToken(topRadii.find(([px])=>px>=8)||[8])[0] + '}` and Soft Lift shadow.' : ''));
         if (cardVariants.length > 0) {
-            compDescs.push('  - Card variants detected: ' + cardVariants.map(v => '`-' + v + '`').join(', '));
+            const cardTypes = [];
+            if (cardVariants.some(v => v.name === 'elevated')) cardTypes.push('elevated');
+            if (cardVariants.some(v => v.name === 'outline' || v.name === 'outlined')) cardTypes.push('outlined');
+            if (cardVariants.some(v => v.name === 'featured')) cardTypes.push('featured');
+            if (cardVariants.some(v => v.name === 'secondary')) cardTypes.push('secondary');
+            compDescs.push('  - Card types: ' + (cardTypes.length > 0 ? cardTypes.map(t => '`-' + t + '`').join(', ') : cardVariants.map(v => '`-' + v.name + '`').join(', ')));
         }
     }
     if (sliders.length > 0) compDescs.push('- **`carousel`**: ' + sliders.length + ' carousel/slider instances.');
@@ -590,7 +638,10 @@ function analyzeData(url, doc, textData) {
         const a1 = accentColors[0][0], a2 = accentColors[1][0];
         const d = colorDist(a1, a2);
         if (d < 60 && d > 10) {
-            relationships.push('- `' + a1 + '` and `' + a2 + '` are **close variants** (Δ=' + d + ') — likely primary/pressed or primary/hover pair.');
+            const l1 = luminance(...Object.values(hexToRgb(a1)));
+            const l2 = luminance(...Object.values(hexToRgb(a2)));
+            const relation = l1 < l2 ? 'pressed' : 'hover';
+            relationships.push('- `' + a1 + '` (primary) and `' + a2 + '` (' + relation + ') — close variant pair, Δ=' + d + '.');
         }
     }
     const surfaceHexes = surfaceColors.filter(([h]) => h !== canvasHex).map(([h]) => h);
