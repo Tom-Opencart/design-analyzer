@@ -200,6 +200,7 @@ function analyzeData(url, doc, textData) {
     const isDark = canvasLum < 0.1;
 
     const accentColorsRaw = finalColors.filter(([hex]) => { const l = luminance(...Object.values(hexToRgb(hex))); return l > 0.08 && l < 0.92 && hex !== canvasHex && (bgSet.has(hex) || txtSet.has(hex) || brdSet.has(hex)); }).slice(0, 7);
+    const seenLabels = new Set();
     const accentColors = accentColorsRaw.filter(([hex]) => !seenLabels.has(colorLabel(hex)) && seenLabels.add(colorLabel(hex)));
     const surfaceColors = finalColors.filter(([hex]) => { const l = luminance(...Object.values(hexToRgb(hex))); return hex === '#ffffff' || hex === '#000000' || (l > 0.85 && l < 0.99 && !txtSet.has(hex)) || (l > 0.01 && l < 0.12 && hex !== canvasHex); }).slice(0, 5);
     const textColors = finalColors.filter(([hex]) => { const l = luminance(...Object.values(hexToRgb(hex))); return (l > 0.85 || l < 0.15) && txtSet.has(hex); }).slice(0, 4);
