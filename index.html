@@ -199,7 +199,8 @@ function analyzeData(url, doc, textData) {
     const canvasLum = luminance(...Object.values(hexToRgb(canvasHex)));
     const isDark = canvasLum < 0.1;
 
-    const accentColors = finalColors.filter(([hex]) => { const l = luminance(...Object.values(hexToRgb(hex))); return l > 0.08 && l < 0.92 && hex !== canvasHex && (bgSet.has(hex) || txtSet.has(hex) || brdSet.has(hex)); }).slice(0, 5);
+    const accentColorsRaw = finalColors.filter(([hex]) => { const l = luminance(...Object.values(hexToRgb(hex))); return l > 0.08 && l < 0.92 && hex !== canvasHex && (bgSet.has(hex) || txtSet.has(hex) || brdSet.has(hex)); }).slice(0, 7);
+    const accentColors = accentColorsRaw.filter(([hex]) => !seenLabels.has(colorLabel(hex)) && seenLabels.add(colorLabel(hex)));
     const surfaceColors = finalColors.filter(([hex]) => { const l = luminance(...Object.values(hexToRgb(hex))); return hex === '#ffffff' || hex === '#000000' || (l > 0.85 && l < 0.99 && !txtSet.has(hex)) || (l > 0.01 && l < 0.12 && hex !== canvasHex); }).slice(0, 5);
     const textColors = finalColors.filter(([hex]) => { const l = luminance(...Object.values(hexToRgb(hex))); return (l > 0.85 || l < 0.15) && txtSet.has(hex); }).slice(0, 4);
 
@@ -266,7 +267,16 @@ function analyzeData(url, doc, textData) {
     const radM = textData.match(radRegex) || [];
     const radC = {};
     radM.forEach(r => { const px = parseFloat(r.replace(/border-radius\s*:\s*/,'').replace(/!important/g,'').trim()); if (!isNaN(px) && px >= 0) radC[px] = (radC[px]||0)+1; });
-    const topRadii = Object.entries(radC).map(([v,c])=>[+v,c]).sort((a,b)=>b[1]-a[1]).slice(0, 6);
+    const topRadii = (function() {
+        const all = Object.entries(radC).map(([v,c])=>[+v,c]).sort((a,b)=>b[1]-a[1]);
+        const seen = new Set();
+        const deduped = [];
+        all.forEach(([px, count]) => {
+            const t = radiusToken(px);
+            if (!seen.has(t)) { seen.add(t); deduped.push([px, count]); }
+        });
+        return deduped.slice(0, 6);
+    })();
 
     const shRegex = /box-shadow\s*:\s*([^;}]+)/g;
     const shM = textData.match(shRegex) || [];
@@ -282,7 +292,7 @@ function analyzeData(url, doc, textData) {
 
     const mqRegex = /@media[^{]*?(?:min|max)?-?width\s*[:(<>]=?\s*(\d+)px/gi;
     const mqM = textData.match(mqRegex) || [];
-    const bps = [...new Set(mqM.map(m=>{const n=m.match(/(\d+)px/);return n?+n[1]:null;}))].filter(Boolean).sort((a,b)=>a-b);
+    const bps = [...new Set(mqM.map(m=>{const n=m.match(/(\d+)px/);return n?+n[1]:null;}))].filter(Boolean).sort((a,b)=>a-b).filter((bp, i, arr) => i === 0 || bp - arr[i-1] > 100);
 
     const wRegex = /max-width\s*:\s*(\d+)px/g;
     const wM = textData.match(wRegex) || [];
