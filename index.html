@@ -96,12 +96,20 @@ let domainBase = 'design';
 const loadingPhases = ["Initializing scanner...","Fetching page...","Extracting DOM...","Analyzing colors...","Analyzing typography...","Generating design.md..."];
 
 async function fetchWithProxies(targetUrl) {
-    const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(targetUrl);
-    const response = await fetch(proxyUrl);
-    if (!response.ok) throw new Error('HTTP ' + response.status);
-    const html = await response.text();
-    if (!html || html.length < 100) throw new Error('Empty response from server');
-    return html;
+    const proxies = [
+        'https://corsproxy.io/?',
+        'https://api.allorigins.win/raw?url=',
+        'https://api.codetabs.com/v1/proxy?quest='
+    ];
+    for (const proxy of proxies) {
+        try {
+            const response = await fetch(proxy + encodeURIComponent(targetUrl), { signal: AbortSignal.timeout(15000) });
+            if (!response.ok) continue;
+            const html = await response.text();
+            if (html && html.length > 100) return html;
+        } catch (e) {}
+    }
+    throw new Error('All proxies failed');
 }
 
 analyzeBtn.addEventListener('click', async () => {
