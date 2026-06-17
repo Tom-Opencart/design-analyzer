@@ -1,28 +1,28 @@
 # Design Analyzer
 
-Design token analyzer — paste a URL, get a `design.md`.
+Анализатор дизайн-токенов — вставьте URL, получите `design.md`.
 
-Extracts colors, typography, spacing, shadows, border radius, breakpoints, and UI components from any website.
+Извлекает цвета, типографику, отступы, тени, радиусы, брейкпоинты и UI-компоненты с любого сайта.
 
-## Usage
+## Использование
 
-Open `index.html` in a browser, paste a URL, click **Analyze**.
+Откройте `index.html` в браузере, вставьте URL, нажмите **Analyze**.
 
-Requires a backend proxy at `/fetch` that accepts `POST { "url": "..." }` and returns `{ "html": "..." }`.
+Требуется бэкенд-прокси на `/fetch`, принимающий `POST { "url": "..." }` и возвращающий `{ "html": "..." }`.
 
-## Output
+## Результат
 
-Generates a structured `design.md` with:
+Генерирует структурированный `design.md` с разделами:
 
-- **Colors** — brand accent, surfaces, text, borders (semantic labels)
-- **Typography** — font family, size hierarchy, weight range
-- **Layout** — spacing scale, container widths, breakpoints
-- **Elevation** — shadow levels
-- **Shapes** — border radius tokens
-- **Components** — buttons, inputs, images, nav, footer, modals, tabs
-- **Do's & Don'ts** — extracted from the actual design language
-- **Responsive** — detected breakpoints
+- **Colors** — акцентный цвет, поверхности, текст, границы (с семантическими метками)
+- **Typography** — семейство шрифтов, иерархия размеров, диапазон насыщенности
+- **Layout** — шкала отступов, ширина контейнеров, брейкпоинты
+- **Elevation** — уровни теней
+- **Shapes** — токены скруглений
+- **Components** — кнопки, поля ввода, изображения, навигация, футер, модалки, табы
+- **Do's & Don'ts** — правила, извлечённые из реального дизайн-языка
+- **Responsive** — обнаруженные брейкпоинты
 
-## Author
+## Автор
 
 Tom
