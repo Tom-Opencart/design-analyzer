@@ -94,11 +94,12 @@ let currentMarkdown = '';
 const loadingPhases = ["Initializing scanner...","Fetching page...","Extracting DOM...","Analyzing colors...","Analyzing typography...","Generating design.md..."];
 
 async function fetchWithProxies(targetUrl) {
-    const response = await fetch('/fetch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: targetUrl }) });
-    const data = await response.json();
-    if (data.error) throw new Error(data.error);
-    if (!data.html || data.html.length < 100) throw new Error('Empty response from server');
-    return data.html;
+    const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(targetUrl);
+    const response = await fetch(proxyUrl);
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+    const html = await response.text();
+    if (!html || html.length < 100) throw new Error('Empty response from server');
+    return html;
 }
 
 analyzeBtn.addEventListener('click', async () => {
