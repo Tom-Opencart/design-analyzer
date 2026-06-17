@@ -614,7 +614,8 @@ function analyzeData(url, doc, textData) {
     md += '- **Grid**: columns reduce proportionally across breakpoints rather than scaling cards down\n';
     md += '- **Typography**: type scale compresses ~20-30% at mobile breakpoints\n';
     md += '\n### Image Behavior\n';
-    md += 'Responsive images maintain native aspect ratios via `object-fit` or `max-width: 100%`. ' + (topRadii.length > 0 && topRadii[0][0] > 0 ? 'Rounded corners (`{rounded.' + radiusToken(topRadii[0][0]) + '}`) persist at every breakpoint.' : 'Sharp corners persist at every breakpoint.') + '\n\n';
+    const imgRadius = topRadii.length > 0 && topRadii[0][0] > 0 ? 'Rounded corners (`{rounded.' + radiusToken(topRadii[0][0]) + '}`) persist at every breakpoint.' : 'Sharp corners persist at every breakpoint.';
+    md += 'Responsive images maintain native aspect ratios via `object-fit` or `max-width: 100%`. ' + imgRadius + '\n\n';
 
     // -- Iteration Guide --
     md += '## Iteration Guide\n\n';
@@ -638,9 +639,8 @@ function analyzeData(url, doc, textData) {
         const a1 = accentColors[0][0], a2 = accentColors[1][0];
         const d = colorDist(a1, a2);
         if (d < 60 && d > 10) {
-            const l1 = luminance(...Object.values(hexToRgb(a1)));
-            const l2 = luminance(...Object.values(hexToRgb(a2)));
-            const relation = l1 < l2 ? 'pressed' : 'hover';
+            const cta1 = bgSet.has(a1), cta2 = bgSet.has(a2);
+            const relation = cta1 && !cta2 ? 'hover' : 'pressed';
             relationships.push('- `' + a1 + '` (primary) and `' + a2 + '` (' + relation + ') — close variant pair, Δ=' + d + '.');
         }
     }
