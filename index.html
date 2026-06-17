@@ -96,14 +96,18 @@ let domainBase = 'design';
 const loadingPhases = ["Initializing scanner...","Fetching page...","Extracting DOM...","Analyzing colors...","Analyzing typography...","Generating design.md..."];
 
 async function fetchWithProxies(targetUrl) {
+    const enc = encodeURIComponent(targetUrl);
     const proxies = [
-        'https://corsproxy.io/?',
-        'https://api.allorigins.win/raw?url=',
-        'https://api.codetabs.com/v1/proxy?quest='
+        { url: 'https://corsproxy.io/?' + enc },
+        { url: 'https://api.allorigins.win/raw?url=' + enc },
+        { url: 'https://api.codetabs.com/v1/proxy?quest=' + enc },
+        { url: 'https://cors.eu.org/?' + enc },
+        { url: 'https://thingproxy.freeboard.io/fetch/' + targetUrl },
+        { url: 'https://webcache.googleusercontent.com/search?q=cache:' + targetUrl }
     ];
-    for (const proxy of proxies) {
+    for (const p of proxies) {
         try {
-            const response = await fetch(proxy + encodeURIComponent(targetUrl), { signal: AbortSignal.timeout(15000) });
+            const response = await fetch(p.url, { signal: AbortSignal.timeout(15000) });
             if (!response.ok) continue;
             const html = await response.text();
             if (html && html.length > 100) return html;
