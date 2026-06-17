@@ -236,7 +236,7 @@ function analyzeData(url, doc, textData) {
         if (r.lineHeight > 0) g.lh.push(r.lineHeight);
         if (r.letterSpacing) g.ls.push(r.letterSpacing);
     });
-    const topSizes = Object.entries(sizeGroups).map(([px, g]) => {
+    let topSizes = Object.entries(sizeGroups).map(([px, g]) => {
         const topW = Object.entries(g.weights).sort((a,b) => b[1]-a[1]);
         const avgLh = g.lh.length > 0 ? g.lh.sort((a,b)=>a-b)[Math.floor(g.lh.length/2)] : 0;
         const topLs = g.ls.length > 0 ? g.ls.sort((a,b) => g.ls.filter(x=>x===b).length - g.ls.filter(x=>x===a).length)[0] : '';
