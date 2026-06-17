@@ -90,6 +90,8 @@ const resultDiv = document.getElementById('result');
 const markdownOutput = document.getElementById('markdownOutput');
 const downloadBtn = document.getElementById('downloadBtn');
 let currentMarkdown = '';
+let currentDomain = 'design';
+let domainBase = 'design';
 
 const loadingPhases = ["Initializing scanner...","Fetching page...","Extracting DOM...","Analyzing colors...","Analyzing typography...","Generating design.md..."];
 
@@ -144,8 +146,9 @@ function colorLabel(hex) {
 function radiusToken(px) { if (px === 0) return 'none'; if (px <= 4) return 'sm'; if (px <= 8) return 'md'; if (px <= 16) return 'lg'; if (px <= 32) return 'xl'; return 'full'; }
 
 function analyzeData(url, doc, textData) {
-    const title = doc.querySelector('title')?.textContent?.trim() || new URL(url).hostname;
-    document.getElementById('resultTitle').textContent = title + ' — design.md';
+    currentDomain = new URL(url).hostname.replace(/^www\./, '');
+    domainBase = currentDomain.split('.')[0];
+    document.getElementById('resultTitle').textContent = currentDomain + ' → design.md';
 
     // COLORS
     const colorRegex = /#(?:[0-9a-fA-F]{3}){1,2}\b/g;
@@ -367,8 +370,7 @@ downloadBtn.addEventListener('click', () => {
     const blob = new Blob([currentMarkdown], { type: 'text/markdown;charset=utf-8' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    const name = (document.getElementById('resultTitle').textContent || 'design').replace(/[^a-zA-Z0-9а-яА-ЯёЁ_-]/g, '_').slice(0, 50);
-    link.download = name + '_design.md';
+    link.download = domainBase + '_design.md';
     document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(link.href);
 });
 
