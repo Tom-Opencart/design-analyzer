@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Design Analyzer</title>
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --surface-color: #161b22;
+            --border-color: #30363d;
+            --text-primary: #c9d1d9;
+            --text-secondary: #8b949e;
+            --accent-color: #58a6ff;
+            --accent-hover: #79b8ff;
+            --success-color: #3fb950;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; background-color: var(--bg-color); color: var(--text-primary); min-height: 100vh; display: flex; flex-direction: column; line-height: 1.5; }
+        header { padding: 2rem; text-align: center; border-bottom: 1px solid var(--border-color); background: linear-gradient(180deg, rgba(88, 166, 255, 0.05) 0%, rgba(13, 17, 23, 0) 100%); }
+        header h1 { font-size: 2.5rem; font-weight: 600; margin-bottom: 0.5rem; letter-spacing: -0.5px; }
+        header p { color: var(--text-secondary); font-size: 1.1rem; }
+        main { flex: 1; padding: 3rem 2rem; max-width: 1000px; width: 100%; margin: 0 auto; }
+        .search-container { display: flex; gap: 1rem; margin-bottom: 2rem; }
+        #urlInput { flex: 1; padding: 0.75rem 1rem; background-color: var(--surface-color); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-primary); font-size: 1rem; transition: border-color 0.2s; }
+        #urlInput:focus { outline: none; border-color: var(--accent-color); box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.2); }
+        #analyzeBtn { padding: 0.75rem 1.5rem; background-color: var(--accent-color); color: #fff; border: none; border-radius: 6px; font-size: 1rem; font-weight: 500; cursor: pointer; transition: background-color 0.2s; }
+        #analyzeBtn:hover:not(:disabled) { background-color: var(--accent-hover); }
+        #analyzeBtn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .loader-container { display: none; flex-direction: column; align-items: center; justify-content: center; padding: 4rem 0; }
+        .loader-container.active { display: flex; }
+        .scanner { width: 100px; height: 100px; position: relative; margin-bottom: 2rem; }
+        .scanner-ring { position: absolute; border: 2px solid transparent; border-radius: 50%; animation: rotate 2s linear infinite; }
+        .scanner-ring:nth-child(1) { inset: 0; border-top-color: var(--accent-color); border-bottom-color: var(--accent-color); }
+        .scanner-ring:nth-child(2) { inset: 15px; border-left-color: var(--success-color); border-right-color: var(--success-color); animation-duration: 1.5s; animation-direction: reverse; }
+        .scanner-ring:nth-child(3) { inset: 30px; border-top-color: #d2a8ff; border-bottom-color: #d2a8ff; animation-duration: 1s; }
+        .scanner-core { position: absolute; inset: 45px; background-color: var(--accent-color); border-radius: 50%; box-shadow: 0 0 15px var(--accent-color); animation: pulse 1.5s ease-in-out infinite; }
+        @keyframes rotate { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(0.8); } }
+        .loader-text { color: var(--text-secondary); font-size: 1rem; font-family: monospace; min-height: 1.5rem; text-align: center; }
+        .result-container { display: none; background-color: var(--surface-color); border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; }
+        .result-container.active { display: block; }
+        .result-header { display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.5rem; border-bottom: 1px solid var(--border-color); background-color: rgba(255, 255, 255, 0.02); }
+        .result-header h3 { font-size: 1rem; font-weight: 600; }
+        #downloadBtn { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background-color: var(--success-color); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 500; transition: filter 0.2s; }
+        #downloadBtn:hover { filter: brightness(1.1); }
+        #markdownOutput { padding: 1.5rem; white-space: pre-wrap; word-break: break-word; font-family: "SF Mono", Monaco, Consolas, "Courier New", monospace; font-size: 0.85rem; line-height: 1.6; color: var(--text-secondary); max-height: 600px; overflow-y: auto; }
+        footer { padding: 1.5rem; text-align: center; border-top: 1px solid var(--border-color); color: var(--text-secondary); font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Design Analyzer</h1>
+        <p>Design token analyzer — paste a URL, get a design.md</p>
+    </header>
+    <main>
+        <div class="search-container" id="urlMode">
+            <input type="text" id="urlInput" placeholder="https://example.com">
+            <button id="analyzeBtn">Analyze</button>
+        </div>
+
+        <div class="loader-container" id="loader">
+            <div class="scanner">
+                <div class="scanner-ring"></div>
+                <div class="scanner-ring"></div>
+                <div class="scanner-ring"></div>
+                <div class="scanner-core"></div>
+            </div>
+            <div class="loader-text" id="loaderText">Initializing scanner...</div>
+        </div>
+        <div class="result-container" id="result">
+            <div class="result-header">
+                <h3 id="resultTitle">design.md</h3>
+                <div style="display:flex;gap:0.5rem">
+                    <button id="copyBtn" style="padding:0.5rem 1rem;background:transparent;color:var(--text-primary);border:1px solid var(--border-color);border-radius:6px;cursor:pointer;font-size:0.9rem;font-weight:500">Copy</button>
+                    <button id="downloadBtn">Download design.md</button>
+                </div>
+            </div>
+            <div id="markdownOutput"></div>
+        </div>
+    </main>
+    <footer>Author: Tom</footer>
+
+<script>
+const urlInput = document.getElementById('urlInput');
+const analyzeBtn = document.getElementById('analyzeBtn');
+const loader = document.getElementById('loader');
+const loaderText = document.getElementById('loaderText');
+const resultDiv = document.getElementById('result');
+const markdownOutput = document.getElementById('markdownOutput');
+const downloadBtn = document.getElementById('downloadBtn');
+let currentMarkdown = '';
+
+const loadingPhases = ["Initializing scanner...","Fetching page...","Extracting DOM...","Analyzing colors...","Analyzing typography...","Generating design.md..."];
+
+async function fetchWithProxies(targetUrl) {
+    const response = await fetch('/fetch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: targetUrl }) });
+    const data = await response.json();
+    if (data.error) throw new Error(data.error);
+    if (!data.html || data.html.length < 100) throw new Error('Empty response from server');
+    return data.html;
+}
+
+analyzeBtn.addEventListener('click', async () => {
+    let url = urlInput.value.trim();
+    if (!url) return alert('Enter a URL');
+    if (!url.startsWith('http://') && !url.startsWith('https://')) { url = 'https://' + url; urlInput.value = url; }
+    try { new URL(url); } catch (e) { return alert('Invalid URL format.'); }
+    loader.classList.add('active'); resultDiv.classList.remove('active'); analyzeBtn.disabled = true; urlInput.disabled = true;
+    let pi = 0; loaderText.innerText = loadingPhases[pi];
+    const iv = setInterval(() => { pi = (pi + 1) % loadingPhases.length; loaderText.innerText = loadingPhases[pi]; }, 1500);
+    try {
+        const html = await fetchWithProxies(url);
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        const stylesheets = Array.from(doc.querySelectorAll('link[rel="stylesheet"]')).slice(0, 5);
+        let cssText = '';
+        for (const link of stylesheets) {
+            let cssUrl = link.getAttribute('href');
+            if (!cssUrl) continue;
+            try { cssUrl = new URL(cssUrl, url).href; cssText += '\n' + await fetchWithProxies(cssUrl); } catch (e) {}
+        }
+        currentMarkdown = analyzeData(url, doc, html + "\n" + cssText);
+    } catch (error) { currentMarkdown = generateFallbackMarkdown(url, error.message); }
+    setTimeout(() => { clearInterval(iv); markdownOutput.textContent = currentMarkdown; loader.classList.remove('active'); resultDiv.classList.add('active'); analyzeBtn.disabled = false; urlInput.disabled = false; }, 2500);
+});
+
+function hexToRgb(hex) { hex = hex.replace('#', ''); if (hex.length === 3) hex = hex.split('').map(c => c + c).join(''); const n = parseInt(hex, 16); return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 }; }
+function rgbToHex(r, g, b) { return '#' + [r, g, b].map(v => Math.round(v).toString(16).padStart(2, '0')).join(''); }
+function luminance(r, g, b) { const a = [r, g, b].map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }); return 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2]; }
+function colorLabel(hex) {
+    try {
+        const { r, g, b } = hexToRgb(hex); const lum = luminance(r, g, b);
+        if (lum < 0.02) return 'Near-Black'; if (lum > 0.95) return 'Near-White';
+        const max = Math.max(r, g, b), min = Math.min(r, g, b); const s = max === 0 ? 0 : (max - min) / max;
+        if (s < 0.08) return lum < 0.4 ? 'Dark Gray' : lum < 0.7 ? 'Gray' : 'Light Gray';
+        let h; const d = max - min;
+        if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6; else if (max === g) h = ((b - r) / d + 2) / 6; else h = ((r - g) / d + 4) / 6;
+        h *= 360;
+        if (h < 15 || h >= 345) return 'Red'; if (h < 45) return 'Orange'; if (h < 70) return 'Yellow'; if (h < 160) return 'Green';
+        if (h < 200) return 'Cyan'; if (h < 260) return 'Blue'; if (h < 300) return 'Purple'; return 'Pink';
+    } catch(e) { return 'Unknown'; }
+}
+function radiusToken(px) { if (px === 0) return 'none'; if (px <= 4) return 'sm'; if (px <= 8) return 'md'; if (px <= 16) return 'lg'; if (px <= 32) return 'xl'; return 'full'; }
+
+function analyzeData(url, doc, textData) {
+    const title = doc.querySelector('title')?.textContent?.trim() || new URL(url).hostname;
+    document.getElementById('resultTitle').textContent = title + ' — design.md';
+
+    // COLORS
+    const colorRegex = /#(?:[0-9a-fA-F]{3}){1,2}\b/g;
+    const allHex = (textData.match(colorRegex) || []).map(c => { let h = c.toLowerCase(); if (h.length === 4) h = '#'+h[1]+h[1]+h[2]+h[2]+h[3]+h[3]; return h; }).filter(h => /^#[0-9a-f]{6}$/.test(h));
+    const rawCounts = {}; allHex.forEach(c => rawCounts[c] = (rawCounts[c]||0)+1);
+    function colorDist(a, b) { const ca = hexToRgb(a), cb = hexToRgb(b); return Math.abs(ca.r-cb.r) + Math.abs(ca.g-cb.g) + Math.abs(ca.b-cb.b); }
+    const merged = {};
+    Object.entries(rawCounts).sort((a,b)=>b[1]-a[1]).forEach(([hex, count]) => { let key = null; for (const k of Object.keys(merged)) { if (colorDist(hex, k) < 30) { key = k; break; } } if (key) merged[key] += count; else merged[hex] = count; });
+    const finalColors = Object.entries(merged).sort((a,b)=>b[1]-a[1]);
+
+    const bgSet = new Set(), txtSet = new Set(), brdSet = new Set(); let m;
+    const bgR = /background(?:-color)?\s*:\s*#([0-9a-f]{6})/gi; while ((m = bgR.exec(textData)) !== null) bgSet.add('#'+m[1].toLowerCase());
+    const txR = /(?:^|;)\s*color\s*:\s*#([0-9a-f]{6})/gim; while ((m = txR.exec(textData)) !== null) txtSet.add('#'+m[1].toLowerCase());
+    const brR = /border[^:]*:\s*[^;]*#([0-9a-f]{6})/gi; while ((m = brR.exec(textData)) !== null) brdSet.add('#'+m[1].toLowerCase());
+
+    function ctxDesc(hex) { const p = []; if (bgSet.has(hex)) p.push('фон'); if (txtSet.has(hex)) p.push('текст'); if (brdSet.has(hex)) p.push('рамки'); return p.join(', ') || 'в CSS'; }
+
+    const canvasHex = finalColors.length > 0 ? finalColors[0][0] : '#ffffff';
+    const canvasLum = luminance(...Object.values(hexToRgb(canvasHex)));
+    const isDark = canvasLum < 0.1;
+    const accentColors = finalColors.filter(([hex]) => { const l = luminance(...Object.values(hexToRgb(hex))); return l > 0.08 && l < 0.92 && hex !== canvasHex && (bgSet.has(hex) || txtSet.has(hex) || brdSet.has(hex)); }).slice(0, 4);
+    const surfaceColors = finalColors.filter(([hex]) => { const l = luminance(...Object.values(hexToRgb(hex))); return (hex === '#ffffff' || hex === '#000000' || (l > 0.88 && l < 0.98) || (l < 0.08 && hex !== canvasHex)); }).slice(0, 4);
+    const textColors = finalColors.filter(([hex]) => { const l = luminance(...Object.values(hexToRgb(hex))); return (l > 0.85 || l < 0.15) && txtSet.has(hex); }).slice(0, 3);
+
+    // FONTS
+    const fontRegex = /font-family\s*:\s*([^;}]+)/g;
+    const fontMatches = textData.match(fontRegex) || [];
+    const fontCounts = {}; let mainFontStack = '';
+    fontMatches.forEach(f => { const raw = f.replace(/font-family\s*:\s*/, '').replace(/!important/g, '').trim(); const stack = raw.split(',').map(s => s.replace(/["']/g, '').trim()).filter(s => s && !s.startsWith('var(')); if (stack.length > 0) { fontCounts[stack[0]] = (fontCounts[stack[0]] || 0) + 1; if (stack.length > 1 && !mainFontStack) mainFontStack = stack.join(', '); } });
+    const topFonts = Object.entries(fontCounts).sort((a,b) => b[1]-a[1]).slice(0, 3);
+    const mainFont = topFonts.length > 0 ? topFonts[0][0] : 'системный шрифт';
+
+    // HEADINGS + SIZES
+    const headings = [];
+    doc.querySelectorAll('h1,h2,h3,h4,h5,h6').forEach(h => { headings.push({ tag: h.tagName.toLowerCase(), text: h.textContent.trim().replace(/\s+/g,' ').slice(0,60) }); });
+
+    const sizeRegex = /font-size\s*:\s*(\d+(?:\.\d+)?(?:px|rem|em))/g;
+    const sizeMatches = textData.match(sizeRegex) || [];
+    const sizeRaw = {};
+    sizeMatches.forEach(s => { let v = s.replace(/font-size\s*:\s*/, '').trim(); if (v.endsWith('rem') || v.endsWith('em')) v = (parseFloat(v) * 16) + ''; const px = Math.round(parseFloat(v)); if (!isNaN(px) && px >= 10 && px <= 72) sizeRaw[px] = (sizeRaw[px]||0) + 1; });
+    const sizeMerged = {};
+    Object.entries(sizeRaw).sort((a,b)=>b[0]-a[0]).forEach(([px, cnt]) => { let key = null; for (const k of Object.keys(sizeMerged)) { if (Math.abs(+k - +px) <= 2) { key = k; break; } } if (key) sizeMerged[key] += cnt; else sizeMerged[px] = cnt; });
+    const topSizes = Object.entries(sizeMerged).map(([s,c])=>[+s,c]).filter(([,c])=>c>=3).sort((a,b)=>b[0]-a[0]).slice(0, 8);
+
+    const fwRegex = /font-weight\s*:\s*(\d+|bold|normal)/g;
+    const fwM = textData.match(fwRegex) || [];
+    const fwC = {};
+    fwM.forEach(f => { let w = f.replace(/font-weight\s*:\s*/,'').trim(); if (w==='bold') w='700'; if (w==='normal') w='400'; fwC[w] = (fwC[w]||0)+1; });
+    const topWeights = Object.entries(fwC).sort((a,b)=>b[1]-a[1]);
+
+    // SHAPES + SHADOWS + SPACING
+    const radRegex = /border-radius\s*:\s*([^;}]+)/g;
+    const radM = textData.match(radRegex) || [];
+    const radC = {};
+    radM.forEach(r => { const px = parseFloat(r.replace(/border-radius\s*:\s*/,'').replace(/!important/g,'').trim()); if (!isNaN(px) && px >= 0) radC[px] = (radC[px]||0)+1; });
+    const topRadii = Object.entries(radC).map(([v,c])=>[+v,c]).sort((a,b)=>b[1]-a[1]).slice(0, 5);
+
+    const shRegex = /box-shadow\s*:\s*([^;}]+)/g;
+    const shM = textData.match(shRegex) || [];
+    const shadows = []; const seenSh = new Set();
+    shM.forEach(s => { const v = s.replace(/box-shadow\s*:\s*/,'').trim(); if (v === 'none') return; const blur = parseFloat((v.match(/[-\d.]+px\s+[-\d.]+px\s+([-\d.]+px)/) || [,'0'])[1]); let level = 'Soft Lift'; if (blur > 20) level = 'Modal / Floating'; else if (blur > 10) level = 'Elevated'; else if (blur > 4) level = 'Soft Lift'; else level = 'Subtle'; if (!seenSh.has(level)) { seenSh.add(level); shadows.push({ val: v.slice(0,70), level }); } });
+
+    const spRegex = /(?:margin|padding)\s*:\s*([^;}]+)/g;
+    const spM = textData.match(spRegex) || [];
+    const spVals = new Set();
+    const standardSp = [0,4,8,12,16,20,24,32,40,48,64,80];
+    spM.forEach(s => { s.replace(/(?:margin|padding)\s*:\s*/,'').split(/\s+/).forEach(v => { const raw = parseFloat(v); if (isNaN(raw) || raw <= 0 || raw > 120) return; const px = standardSp.reduce((prev, curr) => Math.abs(curr - raw) < Math.abs(prev - raw) ? curr : prev); spVals.add(px); }); });
+    const sortedSpacing = [...spVals].sort((a,b)=>a-b).filter(v=>v>0);
+
+    const mqRegex = /@media\s*\([^)]*width\s*[<>]=?\s*(\d+)px/g;
+    const mqM = textData.match(mqRegex) || [];
+    const bps = [...new Set(mqM.map(m=>{const n=m.match(/(\d+)px/);return n?+n[1]:null;}))].filter(Boolean).sort((a,b)=>a-b);
+
+    const wRegex = /max-width\s*:\s*(\d+)px/g;
+    const wM = textData.match(wRegex) || [];
+    const wC = {};
+    wM.forEach(w => { const v=w.match(/(\d+)px/); if(v && +v[1] >= 1000 && +v[1] <= 1600) wC[v[1]+'px']=(wC[v[1]+'px']||0)+1; });
+    const topWidths = Object.entries(wC).sort((a,b)=>b[1]-a[1]).slice(0,3);
+
+    // DOM
+    const imgs = doc.querySelectorAll('img');
+    const btns = doc.querySelectorAll('button,[role="button"],input[type="submit"],[class*="btn"]');
+    const inputs = doc.querySelectorAll('input:not([type="hidden"]),textarea,select');
+    const navEl = doc.querySelector('nav,[role="navigation"]');
+    const footerEl = doc.querySelector('footer,[role="contentinfo"]');
+    const headerEl = doc.querySelector('header');
+    const links = doc.querySelectorAll('a[href]').length;
+    const sliders = doc.querySelectorAll('[class*="slider"],[class*="carousel"],[class*="swiper"]');
+    const modals = doc.querySelectorAll('[class*="modal"],[class*="popup"],[role="dialog"]');
+
+    const compDescs = [];
+    if (navEl) { const navLinks = navEl.querySelectorAll('a').length; compDescs.push('- **top-nav**: Navigation bar with ' + navLinks + ' links, pinned to top'); }
+    if (headerEl) { const hLinks = headerEl.querySelectorAll('a').length; const hBtns = headerEl.querySelectorAll('button').length; compDescs.push('- **header**: ' + hLinks + ' links, ' + hBtns + ' buttons, logo mark'); }
+    if (footerEl) { const fLinks = footerEl.querySelectorAll('a').length; compDescs.push('- **footer**: ' + fLinks + ' links in bottom navigation grid'); }
+    if (btns.length > 0) { const s = [...btns].slice(0,10).map(b=>b.textContent.trim().replace(/\s+/g,' ').slice(0,30)).filter(t=>t && /^[\x20-\x7E]+$/.test(t)).slice(0,5); compDescs.push('- **buttons**: ' + btns.length + ' total.' + (s.length?' Samples: '+s.join(', '):'')); }
+    if (inputs.length > 0) { const types = [...new Set([...inputs].map(i=>i.type||i.tagName.toLowerCase()))].join(', '); compDescs.push('- **form-inputs**: ' + inputs.length + ' fields. Types: ' + types); }
+    if (imgs.length > 0) { const withAlt = [...imgs].filter(i=>i.alt&&i.alt.trim()).length; compDescs.push('- **images**: ' + imgs.length + ' total, ' + withAlt + ' with alt text'); }
+    if (sliders.length > 0) compDescs.push('- **sliders / carousel**: ' + sliders.length + ' carousel instances');
+    if (modals.length > 0) compDescs.push('- **modals / popups**: ' + modals.length + ' overlay dialogs');
+    const forms = doc.querySelectorAll('form');
+    if (forms.length > 0) compDescs.push('- **forms**: ' + forms.length + ' form(s) on page');
+    const breadcrumbs = doc.querySelectorAll('[class*="breadcrumb"], [aria-label*="breadcrumb"]');
+    if (breadcrumbs.length > 0) compDescs.push('- **breadcrumbs**: Navigation path indicators');
+    const tabs = doc.querySelectorAll('[class*="tab"], [role="tablist"]');
+    if (tabs.length > 0) compDescs.push('- **tabs**: ' + tabs.length + ' tab switches');
+
+    // MARKDOWN
+    let md = '';
+
+    // Overview
+    md += '## Overview\n\n';
+    md += title;
+    const displayColor = isDark ? (textColors.length>0?textColors[0][0]:'#ffffff') : '#1a1a1a';
+    md += '. ' + (isDark ? 'Dark theme' : 'Light theme') + ' with ' + canvasHex + ' canvas and ' + displayColor + ' text. ';
+    md += 'Type system runs **' + mainFont + '**';
+    if (topFonts.length > 1 && topFonts[1][0] !== 'inherit') md += ' with ' + topFonts[1][0] + ' as secondary family';
+    md += '. ';
+    if (accentColors.length > 0) md += colorLabel(accentColors[0][0]) + ' (' + accentColors[0][0] + ') serves as the primary accent — used for CTAs, links, and interactive highlights. ';
+    if (topRadii.length > 0 && topRadii[0][0] > 0) md += 'Border radius at ' + topRadii[0][0] + 'px softens cards and containers. ';
+    else md += 'Rectangular geometry with no border-radius on buttons and inputs. ';
+    if (shadows.length > 0) md += 'Elevation via ' + shadows.map(s=>s.level).join(', ') + ' shadow levels.';
+    md += '\n\n**Key Characteristics:**\n';
+    md += '- Near-pure ' + (isDark?'dark':'light') + ' canvas (`{colors.canvas}` — ' + canvasHex + ') with ' + displayColor + ' type\n';
+    if (accentColors.length > 0) md += '- ' + colorLabel(accentColors[0][0]) + ' accent (`{colors.' + colorLabel(accentColors[0][0]).toLowerCase().replace(/[\s/]+/g,'-') + '}` — ' + accentColors[0][0] + ') used for CTA buttons, links, and active states\n';
+    md += '- ' + mainFont + ' across all surfaces — display, body, UI, buttons\n';
+    md += '- Border radius ' + (topRadii.length>0?topRadii[0][0]+'px':'0px') + (topRadii.length>1?' and '+topRadii[1][0]+'px':'') + ' — ' + (topRadii.length>0&&topRadii[0][0]>0?'softened cards, sharp buttons':'rectangular silhouette throughout') + '\n';
+    md += '- ' + btns.length + ' buttons, ' + inputs.length + ' inputs, ' + imgs.length + ' images, ' + links + ' links on page\n\n';
+
+    // Colors
+    md += '## Colors\n\n### Brand & Accent\n';
+    if (accentColors.length > 0) accentColors.forEach(([hex, count]) => {
+        const name = colorLabel(hex);
+        const ctx = ctxDesc(hex);
+        const use = ctx.includes('фон') ? 'Used as CTA background and section highlights' : ctx.includes('рамки') ? 'Used for button borders, link underlines, and accent indicators' : 'Accent color across interactive elements';
+        md += '- **' + name + '** (`{colors.' + name.toLowerCase().replace(/[\s/]+/g,'-') + '}` — `' + hex + '`): ' + use + '. ' + count + ' occurrences.\n';
+    });
+    else md += '- No distinct accent colors detected\n';
+    md += '\n### Surface\n';
+    if (canvasHex === '#ffffff' || surfaceColors.find(([h])=>h==='#ffffff')) md += '- **Canvas** (`{colors.canvas}` — `#ffffff`): The default page floor. Pure white across every surface.\n';
+    if (canvasHex === '#000000' || surfaceColors.find(([h])=>h==='#000000')) md += '- **Canvas Dark** (`{colors.canvas-dark}` — `#000000`): Dark mode page floor. True black.\n';
+    surfaceColors.filter(([h])=>h!==canvasHex&&h!=='#ffffff'&&h!=='#000000').forEach(([hex])=>{ const l=luminance(...Object.values(hexToRgb(hex))); const name = l<0.1?'Surface Dark':'Surface Light'; const use = l<0.1?'Dark panel backgrounds, footer':'Alternating section bands, hover states'; md += '- **' + name + '** (`{colors.surface}` — `' + hex + '`): ' + use + '.\n'; });
+    md += '\n### Text\n';
+    textColors.forEach(([hex]) => { const l = luminance(...Object.values(hexToRgb(hex))); const role = l<0.15?'Ink':l>0.85?'On Dark':'Body'; const use = l<0.15?'Primary text on light surfaces':l>0.85?'Headlines and text on dark backgrounds':'Secondary body copy and descriptions'; md += '- **' + role + '** (`{colors.' + role.toLowerCase().replace(/\s+/g,'-') + '}` — `' + hex + '`): ' + use + '.\n'; });
+    md += '\n### Hairlines & Borders\n';
+    [...brdSet].slice(0,3).forEach(hex => { md += '- **Hairline** (`{colors.hairline}` — `' + hex + '`): 1px dividers between sections, card outlines, table rows.\n'; });
+    md += '\n';
+
+    // Typography
+    md += '## Typography\n\n### Font Family\n**' + mainFont + '**';
+    if (mainFontStack) md += ' is the primary typeface. Fallback stack: `' + mainFontStack + '`';
+    md += '.\n\n';
+    md += '### Hierarchy\n| Token | Size | Weight | Line Height | Use |\n|---|---|---|---|---|\n';
+    const tLabels = ['display-xl','display-lg','display-md','display-sm','title-lg','title-md','title-sm','body-lg','body-md','body-sm','caption-lg','caption-md','caption-sm'];
+    headings.slice(0,6).forEach(h => { const clean = h.text.replace(/[^\x20-\x7E]/g,'').trim(); if (clean) md += '| `{typography.' + h.tag + '}` | — | — | — | ' + clean + ' |\n'; });
+    topSizes.forEach(([px, count], i) => { const t = i < tLabels.length ? tLabels[i] : 'size-' + px; const role = px>=40?'Hero / Display headline':px>=24?'Section heading, card title':px>=16?'Body text, descriptions':'Caption, metadata, fine print'; md += '| `{typography.' + t + '}` | ' + px + 'px | — | — | ' + role + ' |\n'; });
+    md += '\n### Principles\n' + mainFont + ' runs across every surface — display headlines, body copy, button labels, navigation. ';
+    if (topWeights.length >= 2) { const sorted = topWeights.map(([w])=>+w).sort((a,b)=>a-b); md += 'Weight range: ' + sorted[0] + ' for regular body text to ' + sorted[sorted.length-1] + ' for bold headlines and emphasis. '; }
+    md += '\n\n### Note on Font Substitutes\nFallback: `' + (mainFontStack || '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif') + '`\n\n';
+
+    // Layout
+    md += '## Layout\n\n### Spacing System\n';
+    if (sortedSpacing.length > 0) md += '- **Base unit:** 4px\n- **Tokens:** ' + sortedSpacing.map(v=>'`'+v+'px`').join(' · ') + '\n';
+    md += '\n### Grid & Container\n';
+    if (topWidths.length > 0) { const maxW = topWidths[0][0].replace('px',''); md += '- Max content width: ~' + maxW + 'px, centered on wider screens\n'; }
+    if (bps.length > 0) md += '- Breakpoints detected: ' + bps.join(', ') + 'px\n';
+    md += '\n### Whitespace Philosophy\nSpacing follows a ' + (sortedSpacing.length>0?sortedSpacing.slice(0,6).join('/'):'4/8/12/16') + 'px rhythm. Section padding generous at desktop, collapses on mobile. Inner card padding tighter to maximize content density.\n\n';
+
+    // Elevation
+    md += '## Elevation & Depth\n';
+    md += '| Level | Treatment | Use |\n|---|---|---|\n';
+    md += '| 0 — Flat | No shadow, no border | Body sections, full-bleed bands |\n';
+    if (brdSet.size > 0) md += '| 1 — Hairline | 1px `{colors.hairline}` border | Section dividers, card outlines, table rows |\n';
+    shadows.forEach(s => md += '| — | `' + s.val + '` | ' + s.level + ' |\n');
+    md += '\n';
+
+    // Shapes
+    md += '## Shapes\n\n### Border Radius Scale\n';
+    md += '| Token | Value | Use |\n|---|---|---|\n';
+    topRadii.forEach(([px, count]) => { const t = radiusToken(px); const use = px===0?'Universal — buttons, inputs, cards':px<=4?'Buttons, inputs, small badges':px<=8?'Cards, panels, dropdown menus':px<=16?'Large cards, photo frames, modals':'Circular elements — avatars, icon buttons'; md += '| `{rounded.' + t + '}` | ' + px + 'px | ' + use + ' |\n'; });
+    md += '\n### Photography Geometry\n' + imgs.length + ' images on page. Product photography at 1:1 or 4:3 ratios inside rounded containers. Hero banners edge-to-edge.\n\n';
+
+    // Components
+    md += '## Components\n\n';
+    compDescs.forEach(d => md += d + '\n');
+    md += '\n';
+
+    // Do's and Don'ts
+    md += "## Do's and Don'ts\n\n### Do\n";
+    if (accentColors.length > 0) md += '- Anchor CTAs and interactive highlights with `' + accentColors[0][0] + '` — the sole accent color\n';
+    md += '- Use ' + mainFont + ' at all weight levels without substituting for another family\n';
+    if (topRadii.length > 0 && topRadii[0][0] > 0) md += '- Keep `' + topRadii[0][0] + 'px` radius on cards; sharper ' + (topRadii.length>1?topRadii[1][0]+'px':'0px') + ' on buttons and inputs\n';
+    else md += '- Preserve rectangular silhouette (0px radius) on buttons and inputs\n';
+    if (sortedSpacing.length > 0) md += '- Maintain spacing scale: ' + sortedSpacing.slice(0,6).join(', ') + 'px\n';
+    if (surfaceColors.length > 1 && surfaceColors[1][0] !== '#000000') md += '- Alternate section backgrounds (`' + surfaceColors[0][0] + '` / `' + surfaceColors[1][0] + '`) for visual rhythm\n';
+    md += "\n### Don't\n";
+    if (accentColors.length > 0) md += "- Don't use " + accentColors[0][0] + " as a section background — it's an accent-only color\n";
+    md += "- Don't introduce colors outside the extracted palette\n";
+    md += "- Don't bold body type — keep weight contrast between headings and body\n";
+    if (topRadii.length > 0 && topRadii[0][0] > 0) md += "- Don't round cards beyond " + topRadii[0][0] + "px — the current radius IS the brand geometry\n";
+    md += "- Don't add drop-shadows where none exist in the current system\n";
+    md += "- Don't replace " + mainFont + " with a different typeface without strong justification\n";
+    md += "- Don't deviate from the 4px spacing grid\n\n";
+
+    // Responsive
+    md += '## Responsive Behavior\n\n### Breakpoints\n| Name | Width | Key Changes |\n|---|---|---|\n';
+    if (bps.length >= 3) { md += '| Mobile | < ' + bps[0] + 'px | Single column, hamburger nav, collapsed typography |\n| Tablet | ' + bps[0] + '–' + bps[1] + 'px | 2-3 column grid, horizontal navigation |\n| Desktop | ' + bps[1] + '–' + bps[2] + 'px | Full grid, all elements visible |\n'; if (bps.length>3) md += '| Wide | > ' + bps[2] + 'px | Max-width ' + (topWidths[0]?.[0]||'1440px') + ', centered content |\n'; }
+    else md += '| Mobile | < 768px | Single column, hamburger menu, scaled type |\n| Tablet | 768–1024px | 2-3 column grid, adapted typography |\n| Desktop | > 1024px | Full layout, max-width ' + (topWidths[0]?.[0]||'1440px') + ' |\n';
+    md += '\n### Touch Targets\nAll interactive elements (buttons, inputs, links) maintain minimum 44×44px touch area for WCAG compliance.\n';
+
+    return md;
+}
+
+function generateFallbackMarkdown(url, errorMsg) {
+    document.getElementById('resultTitle').textContent = 'design.md — error';
+    return '## Error\n\nFailed to load ' + url + '\n\n**Reason:** ' + errorMsg + '\n\nTry a different site.';
+}
+
+downloadBtn.addEventListener('click', () => {
+    const blob = new Blob([currentMarkdown], { type: 'text/markdown;charset=utf-8' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    const name = (document.getElementById('resultTitle').textContent || 'design').replace(/[^a-zA-Z0-9а-яА-ЯёЁ_-]/g, '_').slice(0, 50);
+    link.download = name + '_design.md';
+    document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(link.href);
+});
+
+document.getElementById('copyBtn').addEventListener('click', function() {
+    navigator.clipboard.writeText(currentMarkdown).then(() => {
+        this.textContent = 'Copied!'; this.style.borderColor = 'var(--success-color)'; this.style.color = 'var(--success-color)';
+        setTimeout(() => { this.textContent = 'Copy'; this.style.borderColor = ''; this.style.color = ''; }, 2000);
+    });
+});
+</script>
+</body>
+</html>
