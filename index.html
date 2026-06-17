@@ -201,7 +201,8 @@ function analyzeData(url, doc, textData) {
     const txR = /(?:^|;)\s*color\s*:\s*#([0-9a-f]{6})/gim; while ((m = txR.exec(textData)) !== null) txtSet.add('#'+m[1].toLowerCase());
     const brR = /border[^:]*:\s*[^;]*#([0-9a-f]{6})/gi; while ((m = brR.exec(textData)) !== null) brdSet.add('#'+m[1].toLowerCase());
 
-    const canvasHex = (finalColors.find(([h]) => h === '#ffffff' || h === '#000000') || finalColors[0])[0];
+    const canvasCandidate = finalColors.find(([h]) => h === '#ffffff' || h === '#000000');
+    const canvasHex = canvasCandidate ? canvasCandidate[0] : (finalColors.length > 0 ? finalColors[0][0] : '#ffffff');
     const canvasLum = luminance(...Object.values(hexToRgb(canvasHex)));
     const isDark = canvasLum < 0.1;
 
