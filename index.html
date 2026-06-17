@@ -157,21 +157,27 @@ function isIconFont(name) { const n = name.toLowerCase().replace(/["']/g, ''); r
 
 function extractCSSProps(textData) {
     const rules = [];
-    const ruleRegex = /([^{]+)\{([^}]+)\}/g; let rm;
-    while ((rm = ruleRegex.exec(textData)) !== null) {
-        const selector = rm[1].trim().toLowerCase();
-        const body = rm[2];
-        const size = (body.match(/font-size\s*:\s*(\d+(?:\.\d+)?(?:px|rem|em))/i) || [])[1] || '';
-        const weight = (body.match(/font-weight\s*:\s*(\d+|bold|normal)/i) || [])[1] || '';
-        const lh = (body.match(/line-height\s*:\s*([\d.]+)/i) || [])[1] || '';
-        const ls = (body.match(/letter-spacing\s*:\s*([-\d.]+(?:px|em|rem)?)/i) || [])[1] || '';
-        if (size) {
-            let spx = parseFloat(size);
-            if (size.endsWith('rem')) spx *= 16; else if (size.endsWith('em')) spx *= 16;
-            const wv = weight === 'bold' ? 700 : weight === 'normal' ? 400 : parseInt(weight) || 0;
-            rules.push({ selector, sizePx: Math.round(spx), weight: wv, lineHeight: parseFloat(lh) || 0, letterSpacing: ls, body });
+    try {
+        const blocks = textData.split('}');
+        for (let i = 0; i < blocks.length && i < 10000; i++) {
+            const block = blocks[i];
+            const sep = block.indexOf('{');
+            if (sep === -1) continue;
+            const selector = block.substring(0, sep).trim().toLowerCase();
+            const body = block.substring(sep + 1);
+            if (!selector || !body) continue;
+            const size = (body.match(/font-size\s*:\s*(\d+(?:\.\d+)?(?:px|rem|em))/i) || [])[1] || '';
+            const weight = (body.match(/font-weight\s*:\s*(\d+|bold|normal)/i) || [])[1] || '';
+            const lh = (body.match(/line-height\s*:\s*([\d.]+)/i) || [])[1] || '';
+            const ls = (body.match(/letter-spacing\s*:\s*([-\d.]+(?:px|em|rem)?)/i) || [])[1] || '';
+            if (size) {
+                let spx = parseFloat(size);
+                if (size.endsWith('rem')) spx *= 16; else if (size.endsWith('em')) spx *= 16;
+                const wv = weight === 'bold' ? 700 : weight === 'normal' ? 400 : parseInt(weight) || 0;
+                rules.push({ selector, sizePx: Math.round(spx), weight: wv, lineHeight: parseFloat(lh) || 0, letterSpacing: ls, body });
+            }
         }
-    }
+    } catch (e) {}
     return rules;
 }
 
