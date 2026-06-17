@@ -146,6 +146,7 @@ function colorLabel(hex) {
 function radiusToken(px) { if (px === 0) return 'none'; if (px <= 4) return 'sm'; if (px <= 8) return 'md'; if (px <= 16) return 'lg'; if (px <= 32) return 'xl'; return 'full'; }
 
 function analyzeData(url, doc, textData) {
+    const title = doc.querySelector('title')?.textContent?.trim() || new URL(url).hostname;
     currentDomain = new URL(url).hostname.replace(/^www\./, '');
     domainBase = currentDomain.split('.')[0];
     document.getElementById('resultTitle').textContent = currentDomain + ' → design.md';
