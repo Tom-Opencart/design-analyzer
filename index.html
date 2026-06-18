@@ -535,6 +535,15 @@ function analyzeData(url, doc, textData) {
             if (match) spacingEntries.push({ token, px: match });
         });
     }
+    // Fallback: use common spacing scale when CSS extraction yields nothing
+    if (spacingEntries.length === 0) {
+        const defaults = [
+            { token: 'xs', px: 4 }, { token: 'sm', px: 8 }, { token: 'md', px: 12 },
+            { token: 'base', px: 16 }, { token: 'lg', px: 24 }, { token: 'xl', px: 32 },
+            { token: 'xxl', px: 48 }, { token: 'section', px: 64 }
+        ];
+        defaults.forEach(d => spacingEntries.push(d));
+    }
 
     // -- Component height helpers --
     const btnH = btnStyles && btnStyles.avgHeight > 0 ? btnStyles.avgHeight : 40;
@@ -562,7 +571,7 @@ function analyzeData(url, doc, textData) {
     md += '  body: "' + bodyHex + '"\n';
     md += '  muted: "' + mutedHex + '"\n';
     md += '  canvas: "' + canvasHex + '"\n';
-    md += '  surface-card: "' + surfaceCardHex + '"\n';
+    if (surfaceCardHex !== canvasHex) md += '  surface-card: "' + surfaceCardHex + '"\n';
     md += '  hairline: "' + hairlineHex + '"\n';
     semanticMatches.forEach(s => { md += '  ' + s.token + ': "' + s.hex + '"\n'; });
 
@@ -590,7 +599,7 @@ function analyzeData(url, doc, textData) {
     if (navEl) { const navLinks = navEl.querySelectorAll('a').length; md += '  nav-bar-top: { height: "' + btnH + 'px", background: "{colors.canvas}", links: ' + navLinks + ' }\n'; }
     if (btns.length > 0) md += '  button-primary: { height: "' + btnH + 'px", radius: "{rounded.sm}", padding: "{spacing.sm} {spacing.lg}" }\n';
     if (btnTypes.includes('outline')) md += '  button-outline: { height: "' + btnH + 'px", radius: "{rounded.sm}", border: "{colors.primary}" }\n';
-    if (btnTypes.includes('secondary')) md += '  button-secondary: { height: "' + btnH + 'px", radius: "{rounded.sm}", background: "{colors.surface-card}" }\n';
+    if (btnTypes.includes('secondary')) md += '  button-secondary: { height: "' + btnH + 'px", radius: "{rounded.sm}", background: "' + (surfaceCardHex !== canvasHex ? '{colors.surface-card}' : '{colors.canvas}') + '" }\n';
     if (btnTypes.includes('text')) md += '  button-text: { height: "' + btnH + 'px", radius: "{rounded.sm}", color: "{colors.primary}" }\n';
     if (btnTypes.includes('icon')) md += '  button-icon: { height: "' + btnH + 'px", radius: "{rounded.pill}" }\n';
     if (inputs.length > 0) md += '  text-input: { height: "' + inputH + 'px", radius: "{rounded.sm}" }\n';
@@ -609,10 +618,13 @@ function analyzeData(url, doc, textData) {
     // -- Overview --
     md += '## Overview\n\n';
     md += siteName + '. ';
-    md += (isDark ? 'Dark' : 'Light') + ' theme with `{colors.canvas}` (' + canvasHex + ') canvas and `{colors.ink}` (' + inkHex + ') type. ';
-    if (mainFont) md += 'Type system runs **' + fontName + '**';
-    if (secondaryFont && secondaryFont !== mainFont && !isIconFont(secondaryFont)) md += ' with ' + secondaryFont + ' as secondary family';
-    md += '. ';
+    md += (isDark ? 'Dark' : 'Light') + ' theme with `{colors.canvas}` (' + canvasHex + ') canvas and `{colors.ink}` (' + inkHex + ') type.';
+    if (mainFont) {
+        md += ' Type system runs **' + fontName + '**';
+        if (secondaryFont && secondaryFont !== mainFont && !isIconFont(secondaryFont)) md += ' with ' + secondaryFont + ' as secondary family';
+        md += '.';
+    }
+    md += ' ';
     if (primaryHex) md += colorLabel(primaryHex) + ' (`{colors.primary}` — ' + primaryHex + ') serves as the primary accent — used for CTAs, links, and interactive highlights. ';
     if (topRadii.length > 0 && topRadii[0][0] > 0) md += 'Border radius at ' + topRadii[0][0] + 'px softens cards and containers. ';
     else md += 'Border radius at 0px keeps a rectangular silhouette throughout. ';
@@ -672,12 +684,17 @@ function analyzeData(url, doc, textData) {
     });
 
     md += '\n### Principles\n';
-    if (mainFont) md += fontName + ' runs across every surface. ';
-    if (allWeights.length >= 2) md += 'Weight range: ' + allWeights[0] + ' to ' + allWeights[allWeights.length - 1] + '. ';
-    if (allWeights.length === 1) md += 'Single weight (' + allWeights[0] + ') across all type roles. ';
+    if (mainFont) {
+        md += fontName + ' runs across every surface. ';
+        if (allWeights.length >= 2) md += 'Weight range: ' + allWeights[0] + ' to ' + allWeights[allWeights.length - 1] + '. ';
+        if (allWeights.length === 1) md += 'Single weight (' + allWeights[0] + ') across all type roles. ';
+    } else {
+        md += 'System font stack used across all surfaces. ';
+        if (allWeights.length >= 2) md += 'Weight range: ' + allWeights[0] + ' to ' + allWeights[allWeights.length - 1] + '. ';
+    }
     md += '\n\n### Note on Font Substitutes\n';
     if (mainFontStack) md += 'Fallback: `' + mainFontStack + '`\n';
-    else md += 'If unavailable, **Inter** (variable) is the closest open-source substitute.\n';
+    else md += 'System default: `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`\n';
     md += '\n';
 
     // -- Layout --
@@ -735,7 +752,7 @@ function analyzeData(url, doc, textData) {
         if (btnTypes.length > 0) {
             const variantLines = [];
             if (btnTypes.includes('outline')) variantLines.push('  - **`{components.button-outline}`**: Outlined — transparent background with `{colors.primary}` border.');
-            if (btnTypes.includes('secondary')) variantLines.push('  - **`{components.button-secondary}`**: Secondary — `{colors.surface-card}` background.');
+            if (btnTypes.includes('secondary')) variantLines.push('  - **`{components.button-secondary}`**: Secondary — `' + (surfaceCardHex !== canvasHex ? '{colors.surface-card}' : '{colors.canvas}') + '` background.');
             if (btnTypes.includes('text')) variantLines.push('  - **`{components.button-text}`**: Text-only — no fill, no border, `{colors.primary}` text.');
             if (btnTypes.includes('icon')) variantLines.push('  - **`{components.button-icon}`**: Icon-only circular — `{rounded.pill}`.');
             md += variantLines.join('\n') + '\n';
@@ -775,8 +792,10 @@ function analyzeData(url, doc, textData) {
     }
     if (footerEl) {
         const fLinks = footerEl.querySelectorAll('a').length;
-        md += '### Footer\n';
-        md += '**`{components.footer}`**: ' + fLinks + ' links in bottom navigation grid. Background `{colors.canvas}`.\n\n';
+        if (fLinks > 0) {
+            md += '### Footer\n';
+            md += '**`{components.footer}`**: ' + fLinks + ' links in bottom navigation grid. Background `{colors.canvas}`.\n\n';
+        }
     }
 
     // -- Responsive --
