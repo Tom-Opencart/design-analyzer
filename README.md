@@ -6,9 +6,9 @@
 
 ## Использование
 
-Откройте `index.html` в браузере, вставьте URL, нажмите **Analyze**.
+**Онлайн:** [https://tom-opencart.github.io/design-analyzer/](https://tom-opencart.github.io/design-analyzer/)
 
-Требуется бэкенд-прокси на `/fetch`, принимающий `POST { "url": "..." }` и возвращающий `{ "html": "..." }`.
+Локально: откройте `index.html` в браузере, вставьте URL, нажмите **Analyze**.
 
 ## Результат
 
