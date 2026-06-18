@@ -134,7 +134,8 @@ analyzeBtn.addEventListener('click', async () => {
             if (!cssUrl) continue;
             try { cssUrl = new URL(cssUrl, url).href; cssText += '\n' + await fetchWithProxies(cssUrl); } catch (e) {}
         }
-        currentMarkdown = analyzeData(url, doc, html + "\n" + cssText);
+        const inlineStyles = Array.from(doc.querySelectorAll('style')).map(s => s.textContent).join('\n');
+        currentMarkdown = analyzeData(url, doc, html + "\n" + cssText + "\n" + inlineStyles);
     } catch (error) { currentMarkdown = generateFallbackMarkdown(url, error.message); }
     setTimeout(() => { clearInterval(iv); markdownOutput.textContent = currentMarkdown; loader.classList.remove('active'); resultDiv.classList.add('active'); analyzeBtn.disabled = false; urlInput.disabled = false; }, 2500);
 });
@@ -166,6 +167,55 @@ function spacingName(px) {
 }
 const ICON_FONTS = ['font awesome', 'fontawesome', 'material icons', 'glyphicon', 'ionicon', 'dashicon', 'genericon', 'octicons', 'elusive', 'foundation-icons', 'fa-', 'fi-', 'glyph', 'material-'];
 function isIconFont(name) { const n = name.toLowerCase().replace(/["']/g, ''); return ICON_FONTS.some(f => n.includes(f)); }
+
+function extractCSSVars(textData) {
+    const vars = {};
+    const rootBlockRegex = /:root\s*\{([^}]+)\}/gi;
+    let match;
+    while ((match = rootBlockRegex.exec(textData)) !== null) {
+        const body = match[1];
+        const varRegex = /--([\w-]+)\s*:\s*([^;]+);/g;
+        let vm;
+        while ((vm = varRegex.exec(body)) !== null) {
+            vars[vm[1].trim()] = vm[2].trim();
+        }
+    }
+    return vars;
+}
+
+function parseColorToHex(colorStr) {
+    if (!colorStr) return null;
+    colorStr = colorStr.trim();
+    let m = colorStr.match(/^#([0-9a-fA-F]{3,8})$/);
+    if (m) {
+        let h = m[1].toLowerCase();
+        if (h.length === 3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+        if (h.length === 6) return '#' + h;
+        if (h.length === 8) return '#' + h.substring(0, 6);
+        return null;
+    }
+    m = colorStr.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+    if (m) {
+        const r = parseInt(m[1]), g = parseInt(m[2]), b = parseInt(m[3]);
+        return '#' + ((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1);
+    }
+    return null;
+}
+
+function spacingToken(px) {
+    if (px === 0) return 'none';
+    if (px <= 4) return 'xs';
+    if (px <= 8) return 'sm';
+    if (px <= 12) return 'md';
+    if (px <= 16) return 'base';
+    if (px <= 24) return 'lg';
+    if (px <= 32) return 'xl';
+    if (px <= 48) return 'xxl';
+    if (px <= 64) return 'section-sm';
+    if (px <= 80) return 'section';
+    if (px <= 96) return 'section-lg';
+    return 'section-xl';
+}
 
 function extractCSSProps(textData) {
     const rules = [];
@@ -200,18 +250,35 @@ function analyzeData(url, doc, textData) {
     document.getElementById('resultTitle').textContent = currentDomain + ' → design.md';
 
     // -- COLORS --
+    const cssVars = extractCSSVars(textData);
+
     const colorRegex = /#(?:[0-9a-fA-F]{3}){1,2}\b/g;
     const allHex = (textData.match(colorRegex) || []).map(c => { let h = c.toLowerCase(); if (h.length === 4) h = '#'+h[1]+h[1]+h[2]+h[2]+h[3]+h[3]; return h; }).filter(h => /^#[0-9a-f]{6}$/.test(h));
+
+    const rgbaRegex = /rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/g;
+    let rm;
+    while ((rm = rgbaRegex.exec(textData)) !== null) {
+        const r = parseInt(rm[1]), g = parseInt(rm[2]), b = parseInt(rm[3]);
+        const hex = '#' + ((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1);
+        allHex.push(hex);
+    }
+
     const rawCounts = {}; allHex.forEach(c => rawCounts[c] = (rawCounts[c]||0)+1);
     function colorDist(a, b) { const ca = hexToRgb(a), cb = hexToRgb(b); return Math.abs(ca.r-cb.r) + Math.abs(ca.g-cb.g) + Math.abs(ca.b-cb.b); }
     const merged = {};
     Object.entries(rawCounts).sort((a,b)=>b[1]-a[1]).forEach(([hex, count]) => { let key = null; for (const k of Object.keys(merged)) { if (colorDist(hex, k) < 30) { key = k; break; } } if (key) merged[key] += count; else merged[hex] = count; });
     const finalColors = Object.entries(merged).sort((a,b)=>b[1]-a[1]);
 
+    const cssVarColors = {};
+    Object.entries(cssVars).forEach(([name, val]) => {
+        const hex = parseColorToHex(val);
+        if (hex && /^#[0-9a-f]{6}$/.test(hex)) cssVarColors[name] = hex;
+    });
+
     const bgSet = new Set(), txtSet = new Set(), brdSet = new Set(); let m;
-    const bgR = /background(?:-color)?\s*:\s*#([0-9a-f]{6})/gi; while ((m = bgR.exec(textData)) !== null) bgSet.add('#'+m[1].toLowerCase());
-    const txR = /(?:^|;)\s*color\s*:\s*#([0-9a-f]{6})/gim; while ((m = txR.exec(textData)) !== null) txtSet.add('#'+m[1].toLowerCase());
-    const brR = /border[^:]*:\s*[^;]*#([0-9a-f]{6})/gi; while ((m = brR.exec(textData)) !== null) brdSet.add('#'+m[1].toLowerCase());
+    const bgR = /background(?:-color)?\s*:\s*(#[0-9a-f]{6}|rgba?\([^)]+\))/gi; while ((m = bgR.exec(textData)) !== null) { const h = parseColorToHex(m[1]); if (h) bgSet.add(h); }
+    const txR = /(?:^|;)\s*color\s*:\s*(#[0-9a-f]{6}|rgba?\([^)]+\))/gim; while ((m = txR.exec(textData)) !== null) { const h = parseColorToHex(m[1]); if (h) txtSet.add(h); }
+    const brR = /border[^:]*:\s*[^;]*(#[0-9a-f]{6}|rgba?\([^)]+\))/gi; while ((m = brR.exec(textData)) !== null) { const h = parseColorToHex(m[1]); if (h) brdSet.add(h); }
 
     const canvasCandidate = finalColors.find(([h]) => h === '#ffffff' || h === '#000000');
     const canvasHex = canvasCandidate ? canvasCandidate[0] : (finalColors.length > 0 ? finalColors[0][0] : '#ffffff');
@@ -221,6 +288,9 @@ function analyzeData(url, doc, textData) {
     const accentColorsRaw = finalColors.filter(([hex]) => { const l = luminance(...Object.values(hexToRgb(hex))); const {r,g,b} = hexToRgb(hex); const max = Math.max(r,g,b), min = Math.min(r,g,b); const s = max === 0 ? 0 : (max-min)/max; return s > 0.15 && l > 0.08 && l < 0.92 && hex !== canvasHex && (bgSet.has(hex) || txtSet.has(hex) || brdSet.has(hex)); }).slice(0, 7);
     const seenLabels = new Set();
     const accentColors = accentColorsRaw.filter(([hex]) => !seenLabels.has(colorLabel(hex)) && seenLabels.add(colorLabel(hex)));
+
+    const primaryHex = accentColors.length > 0 ? accentColors[0][0] : (finalColors.find(([h]) => h !== canvasHex && txtSet.has(h)) || finalColors.find(([h]) => h !== canvasHex) || ['#1a1a1a'])[0];
+
     const surfaceColors = finalColors.filter(([hex]) => { const l = luminance(...Object.values(hexToRgb(hex))); return hex === '#ffffff' || hex === '#000000' || (l > 0.85 && l < 0.99 && !txtSet.has(hex)) || (l > 0.01 && l < 0.12 && hex !== canvasHex); }).slice(0, 5);
     const textColors = finalColors.filter(([hex]) => { const l = luminance(...Object.values(hexToRgb(hex))); return (l > 0.85 || l < 0.15) && txtSet.has(hex); }).slice(0, 4);
 
@@ -395,75 +465,8 @@ function analyzeData(url, doc, textData) {
     const primaryAccent = accentColors.length > 0 ? accentColors[0] : null;
 
     // ===== MARKDOWN GENERATION =====
-    let md = '';
 
-    // -- Overview Narrative --
-    const siteName = title.split(/[|\-–—]/)[0].trim();
-    const primaryColorName = primaryAccent ? colorLabel(primaryAccent[0]) : 'neutral';
-    const fontName = mainFont || 'system font stack';
-    const radiusDesc = topRadii.length > 0 && topRadii[0][0] > 0 ? (topRadii[0][0] + 'px') : '0px (sharp)';
-    const shadowDesc = shadows.length > 0 ? shadows.map(s => s.level).filter((v,i,a)=>a.indexOf(v)===i).join(', ') : 'flat';
-
-    md += '## Overview\n\n';
-    md += siteName + '. ';
-    md += (isDark ? 'Dark' : 'Light') + ' theme with `{colors.canvas}` (' + canvasHex + ') canvas and `{colors.ink}` (' + displayColor + ') type. ';
-    if (mainFont) md += 'Type system runs **' + fontName + '**';
-    if (secondaryFont && secondaryFont !== mainFont && !isIconFont(secondaryFont)) md += ' with ' + secondaryFont + ' as secondary family';
-    md += '. ';
-    if (primaryAccent) md += colorLabel(primaryAccent[0]) + ' (`' + primaryAccent[0] + '`) serves as the primary accent — used for CTAs, links, and interactive highlights. ';
-    md += 'Border radius at ' + radiusDesc + ' softens cards and containers. ';
-    if (shadows.length > 0) md += 'Elevation via ' + shadowDesc + ' shadow levels. ';
-    md += '\n\n**Key Characteristics:**\n';
-    md += '- ' + (isDark ? 'Near-pure dark' : 'Near-pure light') + ' canvas (`{colors.canvas}` — ' + canvasHex + ') with ' + displayColor + ' type\n';
-    if (primaryAccent) md += '- ' + colorLabel(primaryAccent[0]) + ' accent (`{colors.' + colorLabel(primaryAccent[0]).toLowerCase().replace(/[\s/]+/g,'-') + '}` — ' + primaryAccent[0] + ') used for CTA buttons, links, and active states\n';
-    md += '- ' + fontName + ' across all surfaces — display, body, UI, buttons\n';
-    md += '- Border radius ' + radiusDesc + (topRadii.length > 1 && topRadii[1][0] !== topRadii[0][0] ? ' and ' + topRadii[1][0] + 'px' : '') + ' — ' + (topRadii.length > 0 && topRadii[0][0] > 0 ? 'softened cards, sharp buttons' : 'rectangular silhouette throughout') + '\n';
-    md += '- ' + btns.length + ' buttons, ' + inputs.length + ' inputs, ' + imgs.length + ' images, ' + links + ' links on page\n\n';
-
-    // -- Colors --
-    md += '## Colors\n\n### Brand & Accent\n';
-    if (accentColors.length > 0) {
-        accentColors.forEach(([hex, count]) => {
-            const name = colorLabel(hex);
-            const ctx = []; if (bgSet.has(hex)) ctx.push('CTA fills, section backgrounds'); if (txtSet.has(hex)) ctx.push('link text, emphasized copy'); if (brdSet.has(hex)) ctx.push('borders, focus rings');
-            const use = ctx.length > 0 ? ctx.join('; ') : 'accent color across interactive elements';
-            md += '- **' + name + '** (`{colors.' + name.toLowerCase().replace(/[\s/]+/g,'-') + '}` — `' + hex + '`): ' + use + '. ' + count + ' occurrences.\n';
-        });
-    } else md += '- No distinct accent colors detected\n';
-
-    md += '\n### Surface\n';
-    if (canvasHex === '#ffffff' || surfaceColors.find(([h]) => h === '#ffffff')) md += '- **Canvas** (`{colors.canvas}` — `#ffffff`): Pure white page floor.\n';
-    else if (canvasHex === '#000000' || surfaceColors.find(([h]) => h === '#000000')) md += '- **Canvas** (`{colors.canvas}` — `#000000`): True black page floor.\n';
-    else md += '- **Canvas** (`{colors.canvas}` — `' + canvasHex + '`): Page floor.\n';
-
-    let surfIdx = 0;
-    surfaceColors.filter(([h]) => h !== canvasHex && h !== '#ffffff' && h !== '#000000').slice(0, 3).forEach(([hex]) => {
-        const l = luminance(...Object.values(hexToRgb(hex)));
-        const name = l < 0.15 ? 'Surface Dark' : l > 0.85 ? 'Surface Light' : 'Surface Mid';
-        const use = l < 0.15 ? 'Dark card panels, footer bands' : l > 0.85 ? 'Alternating section bands, hover states' : 'Mid-surface card backgrounds';
-        md += '- **' + name + '** (`{colors.surface' + (surfIdx > 0 ? '-' + (surfIdx + 1) : '') + '}` — `' + hex + '`): ' + use + '.\n';
-        surfIdx++;
-    });
-
-    md += '\n### Text\n';
-    const textRoles = ['Ink', 'Body', 'Muted', 'On Dark'];
-    textColors.forEach(([hex], i) => {
-        const l = luminance(...Object.values(hexToRgb(hex)));
-        const role = l < 0.15 ? 'Ink' : l > 0.85 ? 'On Dark' : i === 1 ? 'Body' : 'Muted';
-        const use = l < 0.15 ? 'Primary text, headlines' : l > 0.85 ? 'Text on dark surfaces' : i === 1 ? 'Secondary body copy, descriptions' : 'Footer links, breadcrumbs, captions';
-        md += '- **' + role + '** (`{colors.' + role.toLowerCase().replace(/\s+/g,'-') + '}` — `' + hex + '`): ' + use + '.\n';
-    });
-
-    md += '\n### Hairlines & Borders\n';
-    const borderHexes = [...brdSet].slice(0, 3);
-    if (borderHexes.length > 0) {
-        borderHexes.forEach((hex, i) => {
-            const label = i === 0 ? 'Hairline' : 'Hairline Strong';
-            md += '- **' + label + '** (`{colors.hairline' + (i > 0 ? '-strong' : '') + '}` — `' + hex + '`): 1px dividers between sections, card outlines, table rows.\n';
-        });
-    } else md += '- **Hairline** (`{colors.hairline}`): 1px dividers between sections, card outlines.\n';
-
-    // -- Semantic colors --
+    // -- Semantic color detection --
     const semanticPatterns = [
         { rx: /error|danger|fail|destructive|red/i, name: 'Error', token: 'danger' },
         { rx: /warn|caution|alert/i, name: 'Warning', token: 'warning' },
@@ -479,12 +482,169 @@ function analyzeData(url, doc, textData) {
                 const hexM = r.body.match(/#([0-9a-f]{6})/gi);
                 if (hexM) hexM.forEach(h => hexes.add(h.toLowerCase()));
             });
-            const relevantHexes = [...hexes].filter(h => !surfaceColors.some(([s]) => s === h) && h !== canvasHex && bgSet.has(h) || txtSet.has(h)).slice(0, 2);
+            const relevantHexes = [...hexes].filter(h => !surfaceColors.some(([s]) => s === h) && h !== canvasHex && (bgSet.has(h) || txtSet.has(h))).slice(0, 1);
             relevantHexes.forEach(hex => {
                 semanticMatches.push({ name: sp.name, token: sp.token, hex });
             });
         }
     }
+
+    // -- Color token assignments --
+    const siteName = title.split(/[|\-–—]/)[0].trim();
+    const fontName = mainFont || 'system font stack';
+    const onPrimaryHex = primaryHex ? (() => { const l = luminance(...Object.values(hexToRgb(primaryHex))); return l > 0.5 ? '#000000' : '#ffffff'; })() : '#ffffff';
+    const inkHex = displayColor;
+    const bodyHex = textColors.length > 1 ? textColors[1][0] : (textColors.length > 0 ? textColors[0][0] : displayColor);
+    const mutedHex = textColors.length > 2 ? textColors[2][0] : (textColors.length > 1 ? textColors[1][0] : displayColor);
+    const surfaceCardHex = surfaceColors.length > 0 ? surfaceColors.find(([h]) => h !== canvasHex)?.[0] || canvasHex : canvasHex;
+    const hairlineHex = brdSet.size > 0 ? [...brdSet][0] : '#e5e5e5';
+
+    // -- Typography scale mapping --
+    const tLabels = ['display-xxl', 'display-xl', 'display-lg', 'display-md', 'display-sm', 'title-lg', 'title-md', 'title-sm', 'body-lg', 'body-md', 'caption', 'button', 'nav'];
+
+    // -- Rounded tokens from topRadii --
+    const roundedEntries = [];
+    if (topRadii.length > 0) {
+        const usedTokens = new Set();
+        topRadii.forEach(([px, count]) => {
+            const t = radiusToken(px);
+            if (!usedTokens.has(t)) { usedTokens.add(t); roundedEntries.push({ token: t, px }); }
+        });
+    }
+    // Ensure common tokens exist
+    const ensureRounded = (token, fallback) => { if (!roundedEntries.find(r => r.token === token)) roundedEntries.push({ token, px: fallback }); };
+    ensureRounded('none', 0); ensureRounded('sm', 4); ensureRounded('md', 6); ensureRounded('lg', 8); ensureRounded('xl', 12); ensureRounded('pill', 9999);
+    roundedEntries.sort((a, b) => a.px - b.px);
+
+    // -- Spacing tokens from sortedSpacing --
+    const spacingEntries = [];
+    const spacingTokenMap = [
+        { token: 'xs', maxPx: 4 }, { token: 'sm', maxPx: 8 }, { token: 'md', maxPx: 12 },
+        { token: 'base', maxPx: 16 }, { token: 'lg', maxPx: 24 }, { token: 'xl', maxPx: 32 },
+        { token: 'xxl', maxPx: 48 }, { token: 'section', maxPx: 80 }
+    ];
+    spacingTokenMap.forEach(({ token, maxPx }) => {
+        const match = sortedSpacing.find(v => v <= maxPx && v > (spacingEntries.length > 0 ? spacingEntries[spacingEntries.length - 1].px : 0));
+        if (match) spacingEntries.push({ token, px: match });
+    });
+    // Fill missing from sortedSpacing
+    if (spacingEntries.length === 0 && sortedSpacing.length > 0) {
+        spacingTokenMap.forEach(({ token, maxPx }, i) => {
+            const prev = i > 0 ? spacingTokenMap[i - 1].maxPx : 0;
+            const match = sortedSpacing.find(v => v > prev && v <= maxPx);
+            if (match) spacingEntries.push({ token, px: match });
+        });
+    }
+
+    // -- Component height helpers --
+    const btnH = btnStyles && btnStyles.avgHeight > 0 ? btnStyles.avgHeight : 40;
+    const inputH = inputStyles && inputStyles.avgHeight > 0 ? inputStyles.avgHeight : 40;
+    const cardRounded = topRadii.find(([px]) => px >= 8) || topRadii[0] || [8, 0];
+    const cardRoundedToken = radiusToken(cardRounded[0]);
+
+    // ===== BUILD YAML FRONT MATTER =====
+    let md = '---\n';
+    md += 'version: "1.0"\n';
+    md += 'name: "' + siteName + '"\n';
+
+    // Description
+    const descParts = [];
+    descParts.push((isDark ? 'Dark' : 'Light') + ' theme');
+    if (mainFont) descParts.push('using ' + fontName);
+    if (primaryHex) descParts.push('with ' + colorLabel(primaryHex).toLowerCase() + ' accent');
+    md += 'description: "' + descParts.join(' ') + '. Canvas ' + canvasHex + ', primary accent ' + (primaryHex || 'none') + ', type ' + fontName + '.\"\n';
+
+    // Colors
+    md += 'colors:\n';
+    md += '  primary: "' + (primaryHex || canvasHex) + '"\n';
+    md += '  on-primary: "' + onPrimaryHex + '"\n';
+    md += '  ink: "' + inkHex + '"\n';
+    md += '  body: "' + bodyHex + '"\n';
+    md += '  muted: "' + mutedHex + '"\n';
+    md += '  canvas: "' + canvasHex + '"\n';
+    md += '  surface-card: "' + surfaceCardHex + '"\n';
+    md += '  hairline: "' + hairlineHex + '"\n';
+    semanticMatches.forEach(s => { md += '  ' + s.token + ': "' + s.hex + '"\n'; });
+
+    // Typography
+    md += 'typography:\n';
+    md += '  font-family: "' + (mainFontStack || fontName) + '"\n';
+    md += '  scale:\n';
+    topSizes.forEach((s, i) => {
+        const t = i < tLabels.length ? tLabels[i] : 'size-' + s.px;
+        const lh = s.lineHeight > 0 ? s.lineHeight : (s.px >= 32 ? 1.2 : s.px >= 18 ? 1.4 : 1.5);
+        const w = s.weight > 0 ? s.weight : 400;
+        md += '    ' + t + ': { size: "' + s.px + 'px", weight: "' + w + '", line-height: "' + lh + '" }\n';
+    });
+
+    // Rounded
+    md += 'rounded:\n';
+    roundedEntries.forEach(r => { md += '  ' + r.token + ': "' + r.px + 'px"\n'; });
+
+    // Spacing
+    md += 'spacing:\n';
+    spacingEntries.forEach(s => { md += '  ' + s.token + ': "' + s.px + 'px"\n'; });
+
+    // Components
+    md += 'components:\n';
+    if (navEl) { const navLinks = navEl.querySelectorAll('a').length; md += '  nav-bar-top: { height: "' + btnH + 'px", background: "{colors.canvas}", links: ' + navLinks + ' }\n'; }
+    if (btns.length > 0) md += '  button-primary: { height: "' + btnH + 'px", radius: "{rounded.sm}", padding: "{spacing.sm} {spacing.lg}" }\n';
+    if (btnTypes.includes('outline')) md += '  button-outline: { height: "' + btnH + 'px", radius: "{rounded.sm}", border: "{colors.primary}" }\n';
+    if (btnTypes.includes('secondary')) md += '  button-secondary: { height: "' + btnH + 'px", radius: "{rounded.sm}", background: "{colors.surface-card}" }\n';
+    if (btnTypes.includes('text')) md += '  button-text: { height: "' + btnH + 'px", radius: "{rounded.sm}", color: "{colors.primary}" }\n';
+    if (btnTypes.includes('icon')) md += '  button-icon: { height: "' + btnH + 'px", radius: "{rounded.pill}" }\n';
+    if (inputs.length > 0) md += '  text-input: { height: "' + inputH + 'px", radius: "{rounded.sm}" }\n';
+    if (imgs.length > 0) md += '  card-product: { radius: "{rounded.' + cardRoundedToken + '}" }\n';
+    if (sliders.length > 0) md += '  carousel: { instances: ' + sliders.length + ' }\n';
+    if (modals.length > 0) md += '  modal-overlay: { instances: ' + modals.length + ' }\n';
+    if (forms.length > 0) md += '  form: { instances: ' + forms.length + ' }\n';
+    if (breadcrumbs.length > 0) md += '  breadcrumbs: { present: true }\n';
+    if (tabs.length > 0) md += '  category-tab: { instances: ' + tabs.length + ' }\n';
+    if (footerEl) { const fLinks = footerEl.querySelectorAll('a').length; md += '  footer: { links: ' + fLinks + ', background: "{colors.canvas}" }\n'; }
+
+    md += '---\n\n';
+
+    // ===== PROSE SECTIONS =====
+
+    // -- Overview --
+    md += '## Overview\n\n';
+    md += siteName + '. ';
+    md += (isDark ? 'Dark' : 'Light') + ' theme with `{colors.canvas}` (' + canvasHex + ') canvas and `{colors.ink}` (' + inkHex + ') type. ';
+    if (mainFont) md += 'Type system runs **' + fontName + '**';
+    if (secondaryFont && secondaryFont !== mainFont && !isIconFont(secondaryFont)) md += ' with ' + secondaryFont + ' as secondary family';
+    md += '. ';
+    if (primaryHex) md += colorLabel(primaryHex) + ' (`{colors.primary}` — ' + primaryHex + ') serves as the primary accent — used for CTAs, links, and interactive highlights. ';
+    if (topRadii.length > 0 && topRadii[0][0] > 0) md += 'Border radius at ' + topRadii[0][0] + 'px softens cards and containers. ';
+    else md += 'Border radius at 0px keeps a rectangular silhouette throughout. ';
+    if (shadows.length > 0) md += 'Elevation via ' + shadows.map(s => s.level).filter((v,i,a)=>a.indexOf(v)===i).join(', ') + ' shadow levels. ';
+    md += '\n\n**Key Characteristics:**\n';
+    md += '- ' + (isDark ? 'Near-pure dark' : 'Near-pure light') + ' canvas (`{colors.canvas}` — ' + canvasHex + ') with ' + inkHex + ' type\n';
+    if (primaryHex) md += '- ' + colorLabel(primaryHex) + ' accent (`{colors.primary}` — ' + primaryHex + ') used for CTA buttons, links, and active states\n';
+    md += '- ' + fontName + ' across all surfaces — display, body, UI, buttons\n';
+    if (topRadii.length > 0 && topRadii[0][0] > 0) md += '- Border radius ' + topRadii[0][0] + 'px — softened cards, sharp buttons\n';
+    else md += '- Border radius 0px — rectangular silhouette throughout\n';
+    md += '- ' + btns.length + ' buttons, ' + inputs.length + ' inputs, ' + imgs.length + ' images, ' + links + ' links on page\n\n';
+
+    // -- Colors --
+    md += '## Colors\n\n';
+    md += '### Brand & Accent\n';
+    if (primaryHex) {
+        const count = accentColors.length > 0 ? accentColors[0][1] : 0;
+        md += '- **Primary** (`{colors.primary}` — `' + primaryHex + '`): CTA fills, links, interactive highlights. ' + count + ' occurrences.\n';
+    } else md += '- No distinct accent colors detected\n';
+
+    md += '\n### Surface\n';
+    md += '- **Canvas** (`{colors.canvas}` — `' + canvasHex + '`): Page floor.\n';
+    if (surfaceCardHex !== canvasHex) md += '- **Card** (`{colors.surface-card}` — `' + surfaceCardHex + '`): Card backgrounds, elevated panels.\n';
+
+    md += '\n### Text\n';
+    md += '- **Ink** (`{colors.ink}` — `' + inkHex + '`): Primary text, headlines.\n';
+    if (bodyHex !== inkHex) md += '- **Body** (`{colors.body}` — `' + bodyHex + '`): Secondary body copy.\n';
+    if (mutedHex !== bodyHex && mutedHex !== inkHex) md += '- **Muted** (`{colors.muted}` — `' + mutedHex + '`): Captions, breadcrumbs, helper text.\n';
+
+    md += '\n### Hairlines & Borders\n';
+    md += '- **Hairline** (`{colors.hairline}` — `' + hairlineHex + '`): 1px dividers, card outlines.\n';
+
     if (semanticMatches.length > 0) {
         md += '\n### Semantic\n';
         semanticMatches.forEach(s => {
@@ -494,29 +654,26 @@ function analyzeData(url, doc, textData) {
     md += '\n';
 
     // -- Typography --
-    md += '## Typography\n\n### Font Family\n';
+    md += '## Typography\n\n';
+    md += '### Font Family\n';
     if (mainFont) {
-        md += '**' + fontName + '**';
-        if (mainFontStack) md += ' is the primary typeface. Fallback stack: `' + mainFontStack + '`';
-        md += '.\n\n';
+        md += '**' + fontName + '** is the primary typeface. Fallback stack: `' + (mainFontStack || fontName) + '`.\n\n';
     } else {
-        md += 'System font stack. ' + (mainFontStack || '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif') + '.\n\n';
+        md += 'System font stack. `' + (mainFontStack || '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif') + '`.\n\n';
     }
 
-    md += '### Hierarchy\n| Token | Size | Weight | Line Height | Letter Spacing | Use |\n|---|---|---|---|---|---|\n';
-    const tLabels = ['display-xxl', 'display-xl', 'display-lg', 'display-md', 'display-sm', 'title-lg', 'title-md', 'title-sm', 'body-lg', 'body-md'];
+    md += '### Hierarchy\n| Token | Size | Weight | Line Height | Use |\n|---|---|---|---|---|\n';
     topSizes.forEach((s, i) => {
         const t = i < tLabels.length ? tLabels[i] : 'size-' + s.px;
         const role = s.px >= 48 ? 'Hero / Display headline' : s.px >= 32 ? 'Section heading' : s.px >= 24 ? 'Card title, promo strip' : s.px >= 18 ? 'Lead paragraphs' : s.px >= 15 ? 'Default body, descriptions' : 'Caption, metadata, fine print';
-        const w = s.weight > 0 ? s.weight : '—';
-        const lh = s.lineHeight > 0 ? s.lineHeight : '—';
-        const ls = s.letterSpacing ? s.letterSpacing : '—';
-        md += '| `{typography.' + t + '}` | ' + s.px + 'px | ' + w + ' | ' + lh + ' | ' + ls + ' | ' + role + ' |\n';
+        const w = s.weight > 0 ? s.weight : 400;
+        const lh = s.lineHeight > 0 ? s.lineHeight : (s.px >= 32 ? 1.2 : s.px >= 18 ? 1.4 : 1.5);
+        md += '| `{typography.' + t + '}` | ' + s.px + 'px | ' + w + ' | ' + lh + ' | ' + role + ' |\n';
     });
 
     md += '\n### Principles\n';
-    if (mainFont) md += fontName + ' runs across every surface — display headlines, body copy, button labels, navigation. ';
-    if (allWeights.length >= 2) md += 'Weight range: ' + allWeights[0] + ' for regular body text to ' + allWeights[allWeights.length - 1] + ' for bold headlines and emphasis. ';
+    if (mainFont) md += fontName + ' runs across every surface. ';
+    if (allWeights.length >= 2) md += 'Weight range: ' + allWeights[0] + ' to ' + allWeights[allWeights.length - 1] + '. ';
     if (allWeights.length === 1) md += 'Single weight (' + allWeights[0] + ') across all type roles. ';
     md += '\n\n### Note on Font Substitutes\n';
     if (mainFontStack) md += 'Fallback: `' + mainFontStack + '`\n';
@@ -524,186 +681,138 @@ function analyzeData(url, doc, textData) {
     md += '\n';
 
     // -- Layout --
-    md += '## Layout\n\n### Spacing System\n';
-    if (sortedSpacing.length > 0) {
+    md += '## Layout\n\n';
+    md += '### Spacing System\n';
+    if (spacingEntries.length > 0) {
+        md += '- **Base unit:** ' + (spacingEntries[0] ? spacingEntries[0].px + 'px' : '4px') + '\n';
+        md += '- **Tokens:** ';
+        spacingEntries.forEach(s => { md += '`{spacing.' + s.token + '}` ' + s.px + 'px · '; });
+        md = md.replace(/ · $/, '');
+        md += '\n';
+    } else if (sortedSpacing.length > 0) {
         md += '- **Base unit:** ' + (sortedSpacing[0] % 4 === 0 ? sortedSpacing[0] + 'px' : '4px') + '\n';
         md += '- **Tokens:** ';
         sortedSpacing.forEach(v => { md += '`{spacing.' + spacingName(v) + '}` ' + v + 'px · '; });
         md = md.replace(/ · $/, '');
         md += '\n';
     }
+
     md += '\n### Grid & Container\n';
     if (topWidths.length > 0) md += '- Max content width: ~' + topWidths[0][0].replace('px', '') + 'px, centered on wider screens\n';
     if (bps.length > 0) md += '- Breakpoints detected: ' + bps.join(', ') + 'px\n';
+
     md += '\n### Whitespace Philosophy\n';
     if (sortedSpacing.length > 0) {
-        md += 'Spacing follows a ' + sortedSpacing.filter(v => v <= 24).join('/') + 'px rhythm. Section padding generous at desktop, collapses on mobile.\n';
+        md += 'Spacing follows a ' + sortedSpacing.filter(v => v <= 24).join('/') + 'px rhythm.\n';
     }
     md += '\n';
 
     // -- Elevation --
     md += '## Elevation & Depth\n\n';
     md += '| Level | Treatment | Use |\n|---|---|---|\n';
-    md += '| 0 — Flat | No shadow, no border | Body sections, full-bleed bands |\n';
-    if (brdSet.size > 0) md += '| 1 — Hairline | 1px `{colors.hairline}` border | Section dividers, card outlines, table rows |\n';
+    md += '| 0 — Flat | No shadow, no border | Body sections |\n';
+    if (brdSet.size > 0) md += '| 1 — Hairline | 1px `{colors.hairline}` border | Section dividers, card outlines |\n';
     shadows.forEach(s => {
         md += '| ' + (s.blur > 20 ? '3' : s.blur > 10 ? '2' : '1') + ' — ' + s.level + ' | `' + s.val + '` | ' + s.level + ' surfaces — cards, dropdowns' + (s.blur > 20 ? ', modals' : '') + ' |\n';
     });
     md += '\n';
 
-    // -- Shapes --
-    md += '## Shapes\n\n### Border Radius Scale\n';
-    md += '| Token | Value | Use |\n|---|---|---|\n';
-    topRadii.forEach(([px]) => {
-        const t = radiusToken(px);
-        const use = px === 0 ? 'Universal — buttons, inputs, cards' : px <= 2 ? 'Small badges, inline chips' : px <= 4 ? 'Buttons, inputs, small badges' : px <= 6 ? 'Small cards, menu items' : px <= 8 ? 'Cards, panels, dropdown menus' : px <= 12 ? 'Large cards, sections' : px <= 16 ? 'Large cards, photo frames, pricing tiers' : 'Circular elements — avatars, icon buttons';
-        md += '| `{rounded.' + t + '}` | ' + px + 'px | ' + use + ' |\n';
-    });
-    md += '\n### Photography Geometry\n';
-    md += imgs.length + ' images on page. Product photography at 1:1 or 4:3 ratios inside rounded containers. Hero banners edge-to-edge.\n\n';
-
     // -- Components --
     md += '## Components\n\n';
-    const compDescs = [];
-    if (navEl) { const navLinks = navEl.querySelectorAll('a').length; compDescs.push('- **`nav-bar-top`**: Navigation bar with ' + navLinks + ' links, pinned to top. Background `{colors.canvas}`.'); }
-    if (headerEl && headerEl !== navEl) { compDescs.push('- **`header`**: Page header with logo mark and primary CTAs.'); }
+    if (navEl) {
+        const navLinks = navEl.querySelectorAll('a').length;
+        md += '### Nav Bar\n';
+        md += '**`{components.nav-bar-top}`**: Navigation bar with ' + navLinks + ' links, pinned to top. Background `{colors.canvas}`.\n\n';
+    }
+    if (headerEl && headerEl !== navEl) {
+        md += '### Header\n';
+        md += '**`{components.header}`**: Page header with logo mark and primary CTAs.\n\n';
+    }
     if (btns.length > 0) {
-        const h = btnStyles && btnStyles.avgHeight > 0 ? btnStyles.avgHeight + 'px' : 'auto';
-        compDescs.push('- **`button-primary`**: ' + btns.length + ' buttons on page. Height ~' + h + ', rounded `{rounded.sm}`, padding `{spacing.sm} {spacing.lg}`.');
-        if (btnVariants.length > 0) {
-            compDescs.push('  - Variants detected: ' + btnVariants.map(v => '`-' + v.name + '`').join(', '));
-        }
+        md += '### Button Primary\n';
+        md += '**`{components.button-primary}`**: ' + btns.length + ' buttons. Height ~' + btnH + 'px, rounded `{rounded.sm}`, padding `{spacing.sm} {spacing.lg}`.\n';
+        if (btnVariants.length > 0) md += '  - Variants: ' + btnVariants.map(v => '`-' + v.name + '`').join(', ') + '\n';
         if (btnTypes.length > 0) {
-            if (btnTypes.includes('outline')) compDescs.push('- **`button-outline`**: Outlined variant — transparent background with `{colors.primary}` border.');
-            if (btnTypes.includes('secondary')) compDescs.push('- **`button-secondary`**: Secondary variant — `{colors.surface}` background.');
-            if (btnTypes.includes('text')) compDescs.push('- **`button-text`**: Text-only/ghost variant — no fill, no border, `{colors.primary}` text.');
-            if (btnTypes.includes('icon')) compDescs.push('- **`button-icon`**: Icon-only circular variant — `{rounded.pill}`.');
+            const variantLines = [];
+            if (btnTypes.includes('outline')) variantLines.push('  - **`{components.button-outline}`**: Outlined — transparent background with `{colors.primary}` border.');
+            if (btnTypes.includes('secondary')) variantLines.push('  - **`{components.button-secondary}`**: Secondary — `{colors.surface-card}` background.');
+            if (btnTypes.includes('text')) variantLines.push('  - **`{components.button-text}`**: Text-only — no fill, no border, `{colors.primary}` text.');
+            if (btnTypes.includes('icon')) variantLines.push('  - **`{components.button-icon}`**: Icon-only circular — `{rounded.pill}`.');
+            md += variantLines.join('\n') + '\n';
         }
-    }
-    if (inputs.length > 0) {
-        const h = inputStyles && inputStyles.avgHeight > 0 ? inputStyles.avgHeight + 'px' : 'auto';
-        const types = [...new Set([...inputs].map(i => i.type || i.tagName.toLowerCase()))].join(', ');
-        compDescs.push('- **`text-input`**: ' + inputs.length + ' fields (types: ' + types + '). Height ' + h + ', rounded `{rounded.sm}`.');
-    }
-    if (imgs.length > 0) {
-        compDescs.push('- **`card-product`**: ' + imgs.length + ' images. ' + (cardStyles ? 'Cards with rounded `{rounded.' + radiusToken(topRadii.find(([px])=>px>=8)||[8])[0] + '}` and Soft Lift shadow.' : ''));
-        if (cardVariants.length > 0) {
-            const cardTypes = [];
-            if (cardVariants.some(v => v.name === 'elevated')) cardTypes.push('elevated');
-            if (cardVariants.some(v => v.name === 'outline' || v.name === 'outlined')) cardTypes.push('outlined');
-            if (cardVariants.some(v => v.name === 'featured')) cardTypes.push('featured');
-            if (cardVariants.some(v => v.name === 'secondary')) cardTypes.push('secondary');
-            compDescs.push('  - Card types: ' + (cardTypes.length > 0 ? cardTypes.map(t => '`-' + t + '`').join(', ') : cardVariants.map(v => '`-' + v.name + '`').join(', ')));
-        }
-    }
-    if (sliders.length > 0) compDescs.push('- **`carousel`**: ' + sliders.length + ' carousel/slider instances.');
-    if (modals.length > 0) compDescs.push('- **`modal-overlay`**: ' + modals.length + ' overlay dialogs.');
-    if (forms.length > 0) compDescs.push('- **`form`**: ' + forms.length + ' form(s) on page.');
-    if (breadcrumbs.length > 0) compDescs.push('- **`breadcrumbs`**: Navigation path indicators.');
-    if (tabs.length > 0) compDescs.push('- **`category-tab`**: ' + tabs.length + ' tab switches.');
-    if (footerEl) { const fLinks = footerEl.querySelectorAll('a').length; compDescs.push('- **`footer`**: ' + fLinks + ' links in bottom navigation grid. Background `{colors.canvas}`.'); }
-
-    compDescs.forEach(d => md += d + '\n');
-    md += '\n';
-
-    // -- Dos and Donts --
-    md += "## Do's and Don'ts\n\n### Do\n";
-    if (primaryAccent) md += '- Anchor CTAs and interactive highlights with `' + primaryAccent[0] + '` — the primary accent color\n';
-    if (mainFont) md += '- Use ' + fontName + ' at all weight levels without substituting for another family\n';
-    if (topRadii.length >= 2) md += '- Keep `' + topRadii[0][0] + 'px` radius on cards; sharper `' + topRadii[1][0] + 'px` on buttons and inputs\n';
-    else if (topRadii.length > 0 && topRadii[0][0] > 0) md += '- Maintain `' + topRadii[0][0] + 'px` radius consistently across all components\n';
-    else md += '- Preserve rectangular silhouette (0px radius) on buttons and inputs\n';
-    if (sortedSpacing.length > 0) md += '- Maintain spacing scale: ' + sortedSpacing.slice(0, 6).map(v => '`{spacing.' + spacingName(v) + '}`').join(', ') + '\n';
-    if (surfaceColors.length > 1) md += '- Alternate section backgrounds for visual rhythm (canvas / surface)\n';
-    if (allWeights.length >= 2) md += '- Keep weight contrast between display (' + allWeights[allWeights.length - 1] + ') and body (' + allWeights[0] + ')\n';
-
-    md += "\n### Don't\n";
-    if (primaryAccent) md += "- Don't use `" + primaryAccent[0] + "` as a section background — reserve it for CTAs and interactive elements\n";
-    md += "- Don't introduce colors outside the extracted palette\n";
-    if (allWeights.length > 0) md += "- Don't bold body type — keep weight contrast between headings and body\n";
-    if (topRadii.length > 0 && topRadii[0][0] > 0) md += "- Don't round cards beyond `" + topRadii[0][0] + "px` — the current radius IS the brand geometry\n";
-    md += "- Don't add heavy drop-shadows where none exist in the current system\n";
-    if (mainFont) md += "- Don't replace " + fontName + " with a different typeface without strong justification\n";
-    md += "- Don't deviate from the spacing grid\n\n";
-
-    // -- Responsive --
-    md += '## Responsive Behavior\n\n### Breakpoints\n| Name | Width | Key Changes |\n|---|---|---|\n';
-    if (bps.length >= 3) {
-        md += '| Mobile | < ' + bps[0] + 'px | Single column, hamburger nav, collapsed typography |\n';
-        md += '| Tablet | ' + bps[0] + '–' + bps[1] + 'px | 2-3 column grid, horizontal navigation |\n';
-        md += '| Desktop | ' + bps[1] + '–' + bps[2] + 'px | Full grid, all elements visible |\n';
-        if (bps.length > 3) md += '| Wide | > ' + bps[2] + 'px | Max-width ' + (topWidths[0] ? topWidths[0][0] : '1440px') + ', centered content |\n';
-    } else {
-        md += '| Mobile | < 768px | Single column, hamburger menu, scaled type |\n';
-        md += '| Tablet | 768–1024px | 2-3 column grid, adapted typography |\n';
-        md += '| Desktop | > 1024px | Full layout, max-width ' + (topWidths[0] ? topWidths[0][0] : '1440px') + ' |\n';
-    }
-    md += '\n### Touch Targets\nAll interactive elements (buttons, inputs, links) maintain minimum 44×44px touch area for WCAG compliance.\n';
-    md += '\n### Collapsing Strategy\n';
-    if (navEl) md += '- **Top nav**: collapses to hamburger menu below ' + (bps[0] || '768') + 'px\n';
-    if (forms.length > 0) md += '- **Forms**: single-column stack on mobile, inline fields on desktop\n';
-    if (imgs.length > 0) md += '- **Images**: responsive scaling with native aspect ratio preservation\n';
-    if (sliders.length > 0) md += '- **Carousels**: touch-swipe enabled on mobile, arrow/pagination on desktop\n';
-    md += '- **Grid**: columns reduce proportionally across breakpoints rather than scaling cards down\n';
-    md += '- **Typography**: type scale compresses ~20-30% at mobile breakpoints\n';
-    md += '\n### Image Behavior\n';
-    const imgRadius = topRadii.length > 0 && topRadii[0][0] > 0 ? 'Rounded corners (`{rounded.' + radiusToken(topRadii[0][0]) + '}`) persist at every breakpoint.' : 'Sharp corners persist at every breakpoint.';
-    md += 'Responsive images maintain native aspect ratios via `object-fit` or `max-width: 100%`. ' + imgRadius + '\n\n';
-
-    // -- Iteration Guide --
-    md += '## Iteration Guide\n\n';
-    md += '1. Focus on ONE component at a time. Reference its token key (`{component.button-primary}`, `{component.card-product}`).\n';
-    md += '2. New components default to `{rounded.' + (topRadii.length > 0 ? radiusToken(topRadii[0][0]) : 'none') + '}`. Only use `{rounded.pill}` for circular elements.\n';
-    md += '3. Use `{token.refs}` everywhere — never inline hex or raw px.\n';
-    md += '4. Keep `{colors.primary}` scarce — at most two flame elements per viewport.\n';
-    md += '5. When introducing a new section band, choose from the defined surface tokens.\n';
-    md += '6. Default body to `{typography.body-md}`; reach for display sizes only at section-heading level.\n\n';
-
-    // -- Token Relationships --
-    const relationships = [];
-    const allColors = [...finalColors.map(([h]) => h)];
-    for (const hex of allColors) {
-        if (bgSet.has(hex) && brdSet.has(hex)) {
-            relationships.push('- `{colors.' + colorLabel(hex).toLowerCase().replace(/[\s/]+/g,'-') + '}` (`' + hex + '`) doubles as both **surface fill** and **border color** — no separate hairline token needed.');
-            break;
-        }
-    }
-    if (accentColors.length >= 2) {
-        const a1 = accentColors[0][0], a2 = accentColors[1][0];
-        const d = colorDist(a1, a2);
-        if (d < 60 && d > 10) {
-            const cta1 = bgSet.has(a1), cta2 = bgSet.has(a2);
-            const relation = cta1 && !cta2 ? 'hover' : 'pressed';
-            relationships.push('- `' + a1 + '` (primary) and `' + a2 + '` (' + relation + ') — close variant pair, Δ=' + d + '.');
-        }
-    }
-    const surfaceHexes = surfaceColors.filter(([h]) => h !== canvasHex).map(([h]) => h);
-    const borderHexesArr = [...brdSet];
-    for (const sh of surfaceHexes) {
-        if (borderHexesArr.includes(sh)) {
-            relationships.push('- `{colors.hairline}` (`' + sh + '`) equals a surface token — borders feel like one-step elevations rather than ink lines.');
-            break;
-        }
-    }
-    if (relationships.length > 0) {
-        md += '## Token Relationships\n\n';
-        relationships.forEach(r => md += r + '\n');
         md += '\n';
     }
+    if (inputs.length > 0) {
+        const types = [...new Set([...inputs].map(i => i.type || i.tagName.toLowerCase()))].join(', ');
+        md += '### Text Input\n';
+        md += '**`{components.text-input}`**: ' + inputs.length + ' fields (types: ' + types + '). Height ' + inputH + 'px, rounded `{rounded.sm}`.\n\n';
+    }
+    if (imgs.length > 0) {
+        md += '### Card Product\n';
+        md += '**`{components.card-product}`**: ' + imgs.length + ' images. Cards with rounded `{rounded.' + cardRoundedToken + '}`';
+        if (shadows.length > 0) md += ' and ' + shadows[0].level + ' shadow';
+        md += '.\n\n';
+    }
+    if (sliders.length > 0) {
+        md += '### Carousel\n';
+        md += '**`{components.carousel}`**: ' + sliders.length + ' carousel/slider instance(s).\n\n';
+    }
+    if (modals.length > 0) {
+        md += '### Modal\n';
+        md += '**`{components.modal-overlay}`**: ' + modals.length + ' overlay dialog(s).\n\n';
+    }
+    if (forms.length > 0) {
+        md += '### Form\n';
+        md += '**`{components.form}`**: ' + forms.length + ' form(s) on page.\n\n';
+    }
+    if (breadcrumbs.length > 0) {
+        md += '### Breadcrumbs\n';
+        md += '**`{components.breadcrumbs}`**: Navigation path indicators.\n\n';
+    }
+    if (tabs.length > 0) {
+        md += '### Category Tab\n';
+        md += '**`{components.category-tab}`**: ' + tabs.length + ' tab switch(es).\n\n';
+    }
+    if (footerEl) {
+        const fLinks = footerEl.querySelectorAll('a').length;
+        md += '### Footer\n';
+        md += '**`{components.footer}`**: ' + fLinks + ' links in bottom navigation grid. Background `{colors.canvas}`.\n\n';
+    }
+
+    // -- Responsive --
+    md += '## Responsive Behavior\n\n';
+    md += '### Breakpoints\n| Name | Width | Key Changes |\n|---|---|---|\n';
+    if (bps.length >= 3) {
+        md += '| Mobile | < ' + bps[0] + 'px | Single column, hamburger nav |\n';
+        md += '| Tablet | ' + bps[0] + '–' + bps[1] + 'px | 2-3 column grid |\n';
+        md += '| Desktop | > ' + bps[1] + 'px | Full layout, max-width ' + (topWidths[0] ? topWidths[0][0] : '1440px') + ' |\n';
+    } else {
+        md += '| Mobile | < 768px | Single column, hamburger menu |\n';
+        md += '| Tablet | 768–1024px | 2-3 column grid |\n';
+        md += '| Desktop | > 1024px | Full layout, max-width ' + (topWidths[0] ? topWidths[0][0] : '1440px') + ' |\n';
+    }
+    md += '\n### Touch Targets\n44×44px minimum.\n';
+    md += '\n### Collapsing Strategy\n';
+    if (navEl) md += '- **Top nav**: collapses to hamburger below ' + (bps[0] || '768') + 'px\n';
+    if (forms.length > 0) md += '- **Forms**: single-column stack on mobile\n';
+    if (imgs.length > 0) md += '- **Images**: responsive scaling with aspect ratio preservation\n';
+    if (sliders.length > 0) md += '- **Carousels**: touch-swipe on mobile, arrows on desktop\n';
+    md += '- **Grid**: columns reduce across breakpoints\n';
+    md += '- **Typography**: type scale compresses at mobile breakpoints\n\n';
 
     // -- Known Gaps --
     md += '## Known Gaps\n\n';
     const gaps = [];
-    gaps.push('- Hover, focus, and active states are not extracted — CSS pseudo-class analysis requires runtime evaluation.');
-    gaps.push('- Animation and transition timings (carousel transitions, hover-reveal effects, accordion animations) are out of scope.');
-    gaps.push('- Form validation states (error/success input variants) are not extracted from static CSS alone.');
-    if (!modals.length) gaps.push('- No modal or overlay dialogs detected — popup/drawer components may exist but were not captured.');
-    if (navEl && !doc.querySelector('[class*="mobile"],[class*="hamburger"],[class*="burger"]')) gaps.push('- Mobile navigation pattern (hamburger menu, drawer) not detected — responsive nav behavior may differ from static analysis.');
+    gaps.push('- Hover, focus, and active states are not extracted.');
+    gaps.push('- Animation and transition timings are out of scope.');
+    gaps.push('- Form validation states are not extracted from static CSS alone.');
+    if (!modals.length) gaps.push('- No modal or overlay dialogs detected.');
+    if (navEl && !doc.querySelector('[class*="mobile"],[class*="hamburger"],[class*="burger"]')) gaps.push('- Mobile navigation pattern not detected.');
     const authenticatedPages = doc.querySelectorAll('[class*="account"],[class*="login"],[class*="dashboard"]');
-    if (!authenticatedPages.length) gaps.push('- Authenticated pages (account, dashboard, checkout) were not analyzed — their component set may include additional patterns.');
+    if (!authenticatedPages.length) gaps.push('- Authenticated pages (account, dashboard, checkout) were not analyzed.');
     const darkModeToggle = doc.querySelectorAll('[class*="dark-mode"],[class*="theme-toggle"]');
-    if (!darkModeToggle.length && !isDark) gaps.push('- Dark mode variant not captured — if the site has a dark theme toggle, its tokens are missing.');
-    gaps.push('- The analysis is based on the top ' + cssRules.length + ' CSS rules from up to 5 stylesheets. Inline styles, shadow DOM, and dynamically injected CSS are not captured.');
+    if (!darkModeToggle.length && !isDark) gaps.push('- Dark mode variant not captured.');
+    gaps.push('- Analysis based on top ' + cssRules.length + ' CSS rules from up to 5 stylesheets. Inline styles, shadow DOM, and dynamically injected CSS not captured.');
     gaps.forEach(g => md += g + '\n');
 
     return md;
