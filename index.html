@@ -1478,19 +1478,20 @@ function analyzeData(url, doc, textData) {
     md += 'version: alpha\n';
     md += 'name: "' + siteName + '"\n';
 
-    // Description
+    // Description — detailed prose like the examples
     const descParts = [];
     descParts.push((isDark ? 'Dark' : 'Light') + ' theme');
-    if (mainFont) descParts.push('using ' + fontName);
-    if (primaryHex) descParts.push('with ' + colorLabel(primaryHex).toLowerCase() + ' accent');
-    md += 'description: "' + descParts.join(' ') + '. Canvas ' + canvasHex + ', primary accent ' + (primaryHex || 'none') + ', type ' + fontName + '.\"\n';
-    md += 'dark-mode: ' + (hasDarkMode ? '"detected"' : '"not-detected"') + '\n';
-    if (keyframeNames.length > 0 || transitionDurations.size > 0 || animationDurations.size > 0) {
-        md += 'animations:\n';
-        if (keyframeNames.length > 0) md += '  keyframes: [' + keyframeNames.map(k => '"' + k + '"').join(', ') + ']\n';
-        if (transitionDurations.size > 0) md += '  transition-durations: [' + [...transitionDurations].map(d => '"' + d + '"').join(', ') + ']\n';
-        if (animationDurations.size > 0) md += '  animation-durations: [' + [...animationDurations].map(d => '"' + d + '"').join(', ') + ']\n';
-    }
+    if (mainFont) descParts.push('anchored by ' + fontName + ' throughout');
+    if (primaryHex) descParts.push('with ' + colorLabel(primaryHex).toLowerCase() + ' (' + primaryHex + ') as the primary signal color');
+    descParts.push('on a ' + canvasHex + ' canvas');
+    const descSurface = surfaceCardHex !== canvasHex ? ', elevated surface cards at ' + surfaceCardHex : '';
+    const descRadius = topRadii.length > 0 && topRadii[0][0] > 0 ? 'Cards round at ' + topRadii[0][0] + 'px' : 'Sharp rectangular corners throughout';
+    const descBtnRadius = topRadii.length > 0 ? radiusToken(Math.min(topRadii[0][0] || 0, 8)) : 'none';
+    const fullDesc = descParts.join(' ') + '. ' + descSurface + '. ' + descRadius + ', buttons at {rounded.' + descBtnRadius + '}. ' +
+        (accentColors.length > 1 ? 'Secondary accents include ' + accentColors.slice(1, 4).map(([h]) => h + ' (' + colorLabel(h) + ')').join(', ') + '. ' : '') +
+        'Type runs ' + (mainFontStack || fontName || 'system-ui') + ' at weights ' + (allWeights.length > 0 ? allWeights.join('/') : '400/700') + '. ' +
+        btns.length + ' button(s), ' + inputs.length + ' input(s), ' + imgs.length + ' image(s), ' + links + ' link(s) on the analyzed page.';
+    md += 'description: "' + fullDesc.replace(/"/g, "'") + '"\n';
 
     // Colors
     md += 'colors:\n';
@@ -1532,67 +1533,59 @@ function analyzeData(url, doc, textData) {
 
     // Rounded
     md += 'rounded:\n';
-    roundedEntries.forEach(r => { md += '  ' + r.token + ': "' + r.px + 'px"\n'; });
+    roundedEntries.forEach(r => { md += '  ' + r.token + ': ' + r.px + 'px\n'; });
 
     // Spacing
     md += 'spacing:\n';
-    spacingEntries.forEach(s => { md += '  ' + s.token + ': "' + s.px + 'px"\n'; });
+    spacingEntries.forEach(s => { md += '  ' + s.token + ': ' + s.px + 'px\n'; });
 
     // Components
     md += 'components:\n';
     if (navEl) {
-        const navLinks = navEl.querySelectorAll('a').length;
         md += '  nav-bar-top:\n';
-        md += '    description: "Navigation bar with ' + navLinks + ' links, pinned to top"\n';
         md += '    backgroundColor: "{colors.canvas}"\n';
         md += '    textColor: "{colors.' + (isDark ? 'on-ink' : 'ink') + '}"\n';
         md += '    typography: "{typography.body-md}"\n';
         md += '    height: ' + btnH + 'px\n';
         md += '    padding: 0 32px\n';
-        md += '    links: ' + navLinks + '\n';
     }
     if (btns.length > 0) {
         md += '  button-primary:\n';
-        md += '    description: "Primary CTA — ' + btns.length + ' button(s), ~' + btnH + 'px height"\n';
         md += '    backgroundColor: "{colors.' + (isDark ? 'canvas' : 'primary') + '}"\n';
         md += '    textColor: "{colors.' + (isDark ? 'on-ink' : 'on-primary') + '}"\n';
         md += '    typography: "{typography.button}"\n';
-        md += '    rounded: "{rounded.sm}"\n';
+        md += '    rounded: "{rounded.' + descBtnRadius + '}"\n';
         md += '    padding: {spacing.sm} {spacing.lg}\n';
         md += '    height: ' + btnH + 'px\n';
     }
     if (btnTypes.includes('outline')) {
         md += '  button-outline:\n';
-        md += '    description: "Outlined CTA — transparent background with border"\n';
         md += '    backgroundColor: "{colors.canvas}"\n';
         md += '    textColor: "{colors.' + (isDark ? 'on-ink' : 'primary') + '}"\n';
         md += '    typography: "{typography.button}"\n';
-        md += '    rounded: "{rounded.sm}"\n';
+        md += '    rounded: "{rounded.' + descBtnRadius + '}"\n';
         md += '    padding: {spacing.sm} {spacing.lg}\n';
         md += '    height: ' + btnH + 'px\n';
         md += '    borderColor: "{colors.' + (isDark ? 'on-ink' : 'primary') + '}"\n';
     }
     if (btnTypes.includes('secondary')) {
         md += '  button-secondary:\n';
-        md += '    description: "Secondary CTA — lower emphasis than primary"\n';
         md += '    backgroundColor: "{colors.' + (surfaceCardHex !== canvasHex ? 'surface-card' : 'canvas') + '}"\n';
         md += '    textColor: "{colors.' + (isDark ? 'on-ink' : 'ink') + '}"\n';
         md += '    typography: "{typography.button}"\n';
-        md += '    rounded: "{rounded.sm}"\n';
+        md += '    rounded: "{rounded.' + descBtnRadius + '}"\n';
         md += '    padding: {spacing.sm} {spacing.lg}\n';
         md += '    height: ' + btnH + 'px\n';
     }
     if (btnTypes.includes('text')) {
-        md += '  button-text:\n';
-        md += '    description: "Text-only CTA — no fill, no border, link-style"\n';
-        md += '    backgroundColor: "{colors.canvas}"\n';
+        md += '  button-text-link:\n';
+        md += '    backgroundColor: transparent\n';
         md += '    textColor: "{colors.' + (isDark ? 'on-ink' : 'primary') + '}"\n';
         md += '    typography: "{typography.link-md}"\n';
         md += '    padding: {spacing.xxs} 0\n';
     }
     if (btnTypes.includes('icon')) {
         md += '  button-icon:\n';
-        md += '    description: "Circular icon-only button for compact controls"\n';
         md += '    backgroundColor: "{colors.' + (surfaceCardHex !== canvasHex ? 'surface-card' : 'canvas') + '}"\n';
         md += '    textColor: "{colors.' + (isDark ? 'on-ink' : 'ink') + '}"\n';
         md += '    rounded: "{rounded.full}"\n';
@@ -1600,61 +1593,34 @@ function analyzeData(url, doc, textData) {
     }
     if (inputs.length > 0) {
         md += '  text-input:\n';
-        md += '    description: "Text input field — ' + inputs.length + ' instance(s)"\n';
         md += '    backgroundColor: "{colors.canvas}"\n';
         md += '    textColor: "{colors.' + (isDark ? 'on-ink' : 'ink') + '}"\n';
         md += '    typography: "{typography.body-md}"\n';
-        md += '    rounded: "{rounded.sm}"\n';
+        md += '    rounded: "{rounded.' + descBtnRadius + '}"\n';
         md += '    padding: {spacing.sm} {spacing.md}\n';
         md += '    height: ' + inputH + 'px\n';
     }
     if (imgs.length > 0) {
         md += '  card-product:\n';
-        md += '    description: "Product/content card with ' + imgs.length + ' image(s)"\n';
         md += '    backgroundColor: "{colors.canvas}"\n';
         md += '    textColor: "{colors.' + (isDark ? 'on-ink' : 'ink') + '}"\n';
         md += '    rounded: "{rounded.' + cardRoundedToken + '}"\n';
         md += '    padding: {spacing.xl}\n';
     }
-    if (sliders.length > 0) {
-        md += '  carousel:\n';
-        md += '    description: "Carousel/slider — ' + sliders.length + ' instance(s)"\n';
-        md += '    instances: ' + sliders.length + '\n';
-    }
-    if (modals.length > 0) {
-        md += '  modal-overlay:\n';
-        md += '    description: "Modal dialog overlay — ' + modals.length + ' instance(s)"\n';
-        md += '    instances: ' + modals.length + '\n';
-    }
-    if (forms.length > 0) {
-        md += '  form:\n';
-        md += '    description: "Form container — ' + forms.length + ' form(s)"\n';
-        md += '    instances: ' + forms.length + '\n';
-    }
-    if (breadcrumbs.length > 0) {
-        md += '  breadcrumbs:\n';
-        md += '    description: "Breadcrumb navigation path indicators"\n';
-        md += '    present: true\n';
-    }
     if (tabs.length > 0) {
         md += '  category-tab:\n';
-        md += '    description: "Category tab switcher — ' + tabs.length + ' tab(s)"\n';
         md += '    backgroundColor: "{colors.canvas}"\n';
         md += '    textColor: "{colors.' + (isDark ? 'on-ink' : 'ink') + '}"\n';
-        md += '    typography: "{typography.label-uppercase}"\n';
+        md += '    typography: "{typography.body-md}"\n';
         md += '    rounded: "{rounded.full}"\n';
         md += '    padding: {spacing.xs} {spacing.lg}\n';
-        md += '    instances: ' + tabs.length + '\n';
     }
     if (footerEl) {
-        const fLinks = footerEl.querySelectorAll('a').length;
         md += '  footer:\n';
-        md += '    description: "Page footer — ' + fLinks + ' link(s)"\n';
         md += '    backgroundColor: "{colors.' + (isDark ? 'ink' : 'canvas') + '}"\n';
         md += '    textColor: "{colors.' + (isDark ? 'on-ink' : 'body') + '}"\n';
         md += '    typography: "{typography.body-sm}"\n';
         md += '    padding: {spacing.section}\n';
-        md += '    links: ' + fLinks + '\n';
     }
 
     md += '---\n\n';
@@ -1663,45 +1629,46 @@ function analyzeData(url, doc, textData) {
 
     // -- Overview --
     md += '## Overview\n\n';
-    md += siteName + '. ';
-    md += (isDark ? 'Dark' : 'Light') + ' theme with `{colors.canvas}` (' + canvasHex + ') canvas and `{colors.ink}` (' + inkHex + ') type.';
-    if (mainFont) {
-        md += ' Type system runs **' + fontName + '**';
-        if (secondaryFont && secondaryFont !== mainFont && !isIconFont(secondaryFont)) md += ' with ' + secondaryFont + ' as secondary family';
-        md += '.';
+    // Opening paragraph — rich prose like the examples
+    md += siteName + ' reads as a ' + (isDark ? 'dark-themed' : 'light-themed') + ' interface built on a ';
+    md += (isDark ? 'near-pure dark' : 'near-pure white') + ' canvas (`{colors.canvas}` — ' + canvasHex + ') ';
+    md += 'with ' + inkHex + ' type running **' + (mainFont || 'system font stack') + '**';
+    if (secondaryFont && secondaryFont !== mainFont && !isIconFont(secondaryFont)) md += ' and ' + secondaryFont + ' as secondary family';
+    md += '. ';
+    if (primaryHex) {
+        md += 'The system carries one primary accent — ' + colorLabel(primaryHex).toLowerCase() + ' (`{colors.primary}` — ' + primaryHex + ') — ';
+        md += 'used for CTAs, links, and interactive highlights. ';
     }
-    md += ' ';
-    if (primaryHex) md += colorLabel(primaryHex) + ' (`{colors.primary}` — ' + primaryHex + ') serves as the primary accent — used for CTAs, links, and interactive highlights. ';
-    if (topRadii.length > 0 && topRadii[0][0] > 0) md += 'Border radius at ' + topRadii[0][0] + 'px softens cards and containers. ';
-    else md += 'Border radius at 0px keeps a rectangular silhouette throughout. ';
-    if (shadows.length > 0) md += 'Elevation via ' + shadows.map(s => s.level).filter((v,i,a)=>a.indexOf(v)===i).join(', ') + ' shadow levels. ';
-    md += '\n\n**Key Characteristics:**\n';
-    md += '- ' + (isDark ? 'Near-pure dark' : 'Near-pure light') + ' canvas (`{colors.canvas}` — ' + canvasHex + ') with ' + inkHex + ' type\n';
-    if (primaryHex) md += '- ' + colorLabel(primaryHex) + ' accent (`{colors.primary}` — ' + primaryHex + ') used for CTA buttons, links, and active states\n';
-    md += '- ' + fontName + ' across all surfaces — display, body, UI, buttons\n';
-    if (topRadii.length > 0 && topRadii[0][0] > 0) md += '- Border radius ' + topRadii[0][0] + 'px — softened cards, sharp buttons\n';
-    else md += '- Border radius 0px — rectangular silhouette throughout\n';
-    md += '- ' + btns.length + ' buttons, ' + inputs.length + ' inputs, ' + imgs.length + ' images, ' + links + ' links on page\n';
-    if (hasDarkMode) md += '- Dark mode ' + (hasDarkModeToggle ? 'with manual toggle' : 'via \`prefers-color-scheme\`') + '\n';
-    if (keyframeNames.length > 0) md += '- ' + keyframeNames.length + ' keyframe animation(s)\n';
-    md += '\n';
+    if (topRadii.length > 0 && topRadii[0][0] > 0) {
+        md += 'Cards round at ' + topRadii[0][0] + 'px (`{rounded.' + radiusToken(topRadii[0][0]) + '}`), ';
+        md += 'while buttons stay at ' + Math.min(topRadii[0][0], 8) + 'px (`{rounded.' + radiusToken(Math.min(topRadii[0][0], 8)) + '}`). ';
+    } else {
+        md += 'Every element carries sharp 0px corners — the rectangular silhouette IS the brand language. ';
+    }
+    if (shadows.length > 0) {
+        md += 'Elevation comes from ' + shadows.map(s => s.level).filter((v,i,a)=>a.indexOf(v)===i).join(' and ') + ' shadow tiers. ';
+    }
+    if (surfaceCardHex !== canvasHex) {
+        md += 'Surface cards lift to ' + surfaceCardHex + ' (`{colors.surface-card}`) against the ' + canvasHex + ' floor. ';
+    }
+    md += '\n\n';
 
-    // -- Theme Mode --
-    if (hasDarkMode) {
-        md += '## Theme Mode\n\n';
-        md += '**Dark mode:** ';
-        if (hasDarkMediaQuery && hasDarkModeToggle) {
-            md += 'Supported via \`prefers-color-scheme\` media query with manual toggle (' + darkModeToggles.length + ' element(s)). ';
-        } else if (hasDarkMediaQuery) {
-            md += 'Automatic via \`prefers-color-scheme: dark\` media query. ';
-        } else if (hasDarkModeToggle) {
-            md += 'Manual toggle detected (' + darkModeToggles.length + ' element(s)). ';
-        }
-        if (darkModeClassEls.length > 0) {
-            md += 'Dark mode classes found on ' + darkModeClassEls.length + ' element(s). ';
-        }
-        md += '\n\n';
+    // Key Characteristics block
+    md += '**Key Characteristics:**\n';
+    md += '- ' + (isDark ? 'Near-pure dark' : 'Near-pure light') + ' canvas (`{colors.canvas}` — ' + canvasHex + ') with ' + inkHex + ' type throughout\n';
+    if (primaryHex) md += '- ' + colorLabel(primaryHex) + ' accent (`{colors.primary}` — ' + primaryHex + ') reserved for CTA buttons, links, and active states\n';
+    md += '- **' + (mainFont || 'System font') + '** across all surfaces — display, body, UI, buttons';
+    if (allWeights.length >= 2) md += ' at weights ' + allWeights.join('/');
+    md += '\n';
+    if (topRadii.length > 0 && topRadii[0][0] > 0) md += '- Border radius ' + topRadii[0][0] + 'px on cards; buttons at ' + Math.min(topRadii[0][0], 8) + 'px or sharper\n';
+    else md += '- Border radius 0px — rectangular silhouette throughout\n';
+    md += '- ' + btns.length + ' buttons, ' + inputs.length + ' inputs, ' + imgs.length + ' images, ' + links + ' links on the analyzed page\n';
+    if (accentColors.length > 1) {
+        md += '- Secondary accent palette: ' + accentColors.slice(1, 4).map(([h, c]) => '`' + h + '` (' + colorLabel(h) + ', ' + c + ' occurrences)').join(', ') + '\n';
     }
+    if (sortedSpacing.length > 0) md += '- Spacing rhythm: ' + sortedSpacing.filter(v => v <= 32).join('/') + 'px\n';
+    if (topWidths.length > 0) md += '- Max content width: ~' + topWidths[0][0] + '\n';
+    md += '\n';
 
     // -- Colors --
     md += '## Colors\n\n';
@@ -1836,89 +1803,97 @@ function analyzeData(url, doc, textData) {
         md += 'No circular avatar masks detected — all image containers use rectilinear or softly-rounded geometry.\n\n';
     }
 
-    // -- Animations & Transitions --
-    if (keyframeNames.length > 0 || transitionDurations.size > 0 || animationDurations.size > 0) {
-        md += '## Animations & Transitions\n\n';
-        if (transitionDurations.size > 0) {
-            md += '### Transition Durations\n';
-            md += '- ' + [...transitionDurations].sort().join(', ') + '\n\n';
-        }
-        if (animationDurations.size > 0) {
-            md += '### Animation Durations\n';
-            md += '- ' + [...animationDurations].sort().join(', ') + '\n\n';
-        }
-        if (keyframeNames.length > 0) {
-            md += '### Keyframe Animations\n';
-            keyframeNames.forEach(k => { md += '- \`' + k + '\`\n'; });
-            md += '\n';
-        }
-        md += '### Guidelines\n';
-        md += '- Use easing curves for natural motion\n';
-        md += '- Keep micro-interactions under 200ms\n';
-        md += '- Page transitions: 300\u2013500ms\n\n';
-    }
-
     // -- Components --
     md += '## Components\n\n';
     if (navEl) {
         const navLinks = navEl.querySelectorAll('a').length;
-        md += '### Nav Bar\n';
-        md += '**`{component.nav-bar-top}`**: Navigation bar with ' + navLinks + ' links, pinned to top. Background `{colors.canvas}`.\n\n';
+        md += '### Nav Bar\n\n';
+        md += '**`{component.nav-bar-top}`** — Top navigation bar pinned to the top of every page. ';
+        md += btnH + 'px tall, `{colors.canvas}` background. ';
+        md += 'Carries ' + navLinks + ' links in `{typography.body-md}`. ';
+        md += '1px `{colors.hairline}` bottom border separates nav from page body.\n\n';
     }
     if (headerEl && headerEl !== navEl) {
-        md += '### Header\n';
-        md += '**`{component.header}`**: Page header with logo mark and primary CTAs.\n\n';
+        md += '### Header\n\n';
+        md += '**`{component.header}`** — Page header with logo mark and primary CTAs. ';
+        md += 'Sits above the main content area.\n\n';
     }
     if (btns.length > 0) {
-        md += '### Button Primary\n';
-        md += '**`{component.button-primary}`**: ' + btns.length + ' buttons. Height ~' + btnH + 'px, rounded `{rounded.sm}`, padding `{spacing.sm} {spacing.lg}`.\n';
-        if (btnVariants.length > 0) md += '  - Variants: ' + btnVariants.map(v => '`-' + v.name + '`').join(', ') + '\n';
-        if (btnTypes.length > 0) {
-            const variantLines = [];
-            if (btnTypes.includes('outline')) variantLines.push('  - **`{component.button-outline}`**: Outlined — transparent background with `{colors.primary}` border.');
-            if (btnTypes.includes('secondary')) variantLines.push('  - **`{component.button-secondary}`**: Secondary — `' + (surfaceCardHex !== canvasHex ? '{colors.surface-card}' : '{colors.canvas}') + '` background.');
-            if (btnTypes.includes('text')) variantLines.push('  - **`{component.button-text}`**: Text-only — no fill, no border, `{colors.primary}` text.');
-            if (btnTypes.includes('icon')) variantLines.push('  - **`{component.button-icon}`**: Icon-only circular — `{rounded.full}`.');
-            md += variantLines.join('\n') + '\n';
+        md += '### Buttons\n\n';
+        md += '**`{component.button-primary}`** — The primary CTA. ';
+        md += 'Background `{colors.' + (isDark ? 'canvas' : 'primary') + '}`, text `{colors.' + (isDark ? 'on-ink' : 'on-primary') + '}`, ';
+        md += 'rounded `{rounded.' + descBtnRadius + '}`, padding `{spacing.sm} {spacing.lg}`, height ' + btnH + 'px. ';
+        md += 'Type `{typography.button}`. ' + btns.length + ' instance(s) on the analyzed page.\n';
+        if (btnTypes.includes('outline')) {
+            md += '\n**`{component.button-outline}`** — Outlined CTA with transparent background. ';
+            md += 'Text and 1px border in `{colors.' + (isDark ? 'on-ink' : 'primary') + '}`. ';
+            md += 'Same dimensions as primary.\n';
+        }
+        if (btnTypes.includes('secondary')) {
+            md += '\n**`{component.button-secondary}`** — Lower-emphasis CTA. ';
+            md += 'Background `{colors.' + (surfaceCardHex !== canvasHex ? 'surface-card' : 'canvas') + '}`, text `{colors.ink}`. ';
+            md += 'Same dimensions as primary.\n';
+        }
+        if (btnTypes.includes('text')) {
+            md += '\n**`{component.button-text-link}`** — Inline text link. ';
+            md += 'No fill, no border — just `{colors.' + (isDark ? 'on-ink' : 'primary') + '}` text in `{typography.link-md}`. ';
+            md += 'Padding `{spacing.xxs} 0`.\n';
+        }
+        if (btnTypes.includes('icon')) {
+            md += '\n**`{component.button-icon}`** — Circular icon-only button. ';
+            md += 'Background `{colors.' + (surfaceCardHex !== canvasHex ? 'surface-card' : 'canvas') + '}`, rounded `{rounded.full}`, size ' + btnH + 'px.\n';
         }
         md += '\n';
     }
     if (inputs.length > 0) {
         const types = [...new Set([...inputs].map(i => i.type || i.tagName.toLowerCase()))].join(', ');
-        md += '### Text Input\n';
-        md += '**`{component.text-input}`**: ' + inputs.length + ' fields (types: ' + types + '). Height ' + inputH + 'px, rounded `{rounded.sm}`.\n\n';
+        md += '### Text Input\n\n';
+        md += '**`{component.text-input}`** — Standard text input field. ';
+        md += 'Background `{colors.canvas}`, text `{colors.ink}`, rounded `{rounded.' + descBtnRadius + '}`, ';
+        md += 'padding `{spacing.sm} {spacing.md}`, height ' + inputH + 'px. ';
+        md += '1px `{colors.hairline}` border. ' + inputs.length + ' instance(s) detected (types: ' + types + ').\n\n';
     }
     if (imgs.length > 0) {
-        md += '### Card Product\n';
-        md += '**`{component.card-product}`**: ' + imgs.length + ' images. Cards with rounded `{rounded.' + cardRoundedToken + '}`';
-        if (shadows.length > 0) md += ' and ' + shadows[0].level + ' shadow';
-        md += '.\n\n';
+        md += '### Card Product\n\n';
+        md += '**`{component.card-product}`** — The workhorse product/content tile. ';
+        md += 'Background `{colors.canvas}`, rounded `{rounded.' + cardRoundedToken + '}`, padding `{spacing.xl}`. ';
+        if (shadows.length > 0) md += 'Lifted with ' + shadows[0].level + ' shadow. ';
+        md += imgs.length + ' image(s) on the analyzed page.\n\n';
     }
     if (sliders.length > 0) {
-        md += '### Carousel\n';
-        md += '**`{component.carousel}`**: ' + sliders.length + ' carousel/slider instance(s).\n\n';
+        md += '### Carousel\n\n';
+        md += '**`{component.carousel}`** — Image/content carousel with ' + sliders.length + ' instance(s). ';
+        md += 'Typically carries arrow controls at `{rounded.full}` and dot pagination.\n\n';
     }
     if (modals.length > 0) {
-        md += '### Modal\n';
-        md += '**`{component.modal-overlay}`**: ' + modals.length + ' overlay dialog(s).\n\n';
+        md += '### Modal\n\n';
+        md += '**`{component.modal-overlay}`** — Overlay dialog with ' + modals.length + ' instance(s). ';
+        md += 'Background `{colors.canvas}`, elevated shadow, padded container.\n\n';
     }
     if (forms.length > 0) {
-        md += '### Form\n';
-        md += '**`{component.form}`**: ' + forms.length + ' form(s) on page.\n\n';
+        md += '### Form\n\n';
+        md += '**`{component.form}`** — Form container with ' + forms.length + ' form(s) on the analyzed page. ';
+        md += 'Holds text inputs, buttons, and labels in a vertical stack.\n\n';
     }
     if (breadcrumbs.length > 0) {
-        md += '### Breadcrumbs\n';
-        md += '**`{component.breadcrumbs}`**: Navigation path indicators.\n\n';
+        md += '### Breadcrumbs\n\n';
+        md += '**`{component.breadcrumbs}`** — Navigation path indicators. ';
+        md += 'Text in `{typography.caption-md}`, color `{colors.muted}`.\n\n';
     }
     if (tabs.length > 0) {
-        md += '### Category Tab\n';
-        md += '**`{component.category-tab}`**: ' + tabs.length + ' tab switch(es).\n\n';
+        md += '### Category Tab\n\n';
+        md += '**`{component.category-tab}`** — Category selector tabs with ' + tabs.length + ' instance(s). ';
+        md += 'Text-only labels in `{typography.body-md}`, rounded `{rounded.full}`, padding `{spacing.xs} {spacing.lg}`. ';
+        md += 'Active state uses `{colors.ink}` background with `{colors.on-ink}` text.\n\n';
     }
     if (footerEl) {
         const fLinks = footerEl.querySelectorAll('a').length;
         if (fLinks > 0) {
-            md += '### Footer\n';
-            md += '**`{component.footer}`**: ' + fLinks + ' links in bottom navigation grid. Background `{colors.canvas}`.\n\n';
+            md += '### Footer\n\n';
+            md += '**`{component.footer}`** — Page footer closing every page. ';
+            md += 'Background `{colors.' + (isDark ? 'ink' : 'canvas') + '}`, text `{colors.' + (isDark ? 'on-ink' : 'body') + '}`. ';
+            md += fLinks + ' links in the bottom navigation grid. ';
+            md += 'Type `{typography.body-sm}`, padding `{spacing.section}`.\n\n';
         }
     }
 
