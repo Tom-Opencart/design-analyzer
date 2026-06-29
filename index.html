@@ -262,7 +262,7 @@
         /* Compact Bento Grid (Row layout to save height) */
         .features-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-columns: repeat(4, 1fr);
             gap: 1.25rem;
             margin-top: 1.5rem;
         }
@@ -440,6 +440,11 @@
             0% { stroke-dashoffset: 1000; }
             50% { stroke-dashoffset: 0; }
             100% { stroke-dashoffset: -1000; }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.6; }
+            50% { transform: scale(1.3); opacity: 1; border-color: var(--accent-color); }
         }
         
         .loader-info {
@@ -700,6 +705,18 @@
                             </div>
                         </div>
                     </div>
+                    <div class="feature-card">
+                        <div class="feature-info">
+                            <div class="feature-title">Движение</div>
+                            <div class="feature-desc">Извлекает анимации, переходы и keyframes.</div>
+                        </div>
+                        <div class="feature-demo">
+                            <div style="display:flex;gap:4px;align-items:center;">
+                                <div style="width:20px;height:20px;border:1px solid var(--border-color);animation:pulse 1.5s infinite;"></div>
+                                <div style="font-family:var(--font-mono);font-size:0.6rem;color:var(--accent-color);">ms</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </section>
 
@@ -898,7 +915,7 @@ function radiusToken(px) {
     if (px <= 12) return 'xl'; 
     if (px <= 16) return 'xxl'; 
     if (px <= 32) return 'xxxl'; 
-    return 'pill'; 
+    return 'full'; 
 }
 
 function spacingName(px) {
@@ -950,39 +967,42 @@ function parseColorToHex(colorStr) {
     return null;
 }
 
-function spacingToken(px) {
-    if (px === 0) return 'none';
-    if (px <= 4) return 'xs';
-    if (px <= 8) return 'sm';
-    if (px <= 12) return 'md';
-    if (px <= 16) return 'base';
-    if (px <= 24) return 'lg';
-    if (px <= 32) return 'xl';
-    if (px <= 48) return 'xxl';
-    if (px <= 64) return 'section-sm';
-    if (px <= 80) return 'section';
-    if (px <= 96) return 'section-lg';
-    return 'section-xl';
-}
-
 function extractCSSProps(textData) {
     const rules = [];
+    let pos = 0;
+    const len = textData.length;
+    const MAX_RULES = 2000;
+    const FONT_SIZE_RE = /font-size\s*:\s*(\d+(?:\.\d+)?(?:px|rem|em))/i;
+    const WEIGHT_RE = /font-weight\s*:\s*(\d+|bold|normal)/i;
+    const LH_RE = /line-height\s*:\s*([\d.]+)/i;
+    const LS_RE = /letter-spacing\s*:\s*([-\d.]+(?:px|em|rem)?)/i;
     try {
-        const blocks = textData.split('}');
-        for (let i = 0; i < blocks.length && i < 10000; i++) {
-            const block = blocks[i];
-            const sep = block.indexOf('{');
-            if (sep === -1) continue;
-            const selector = block.substring(0, sep).trim().toLowerCase();
-            const body = block.substring(sep + 1);
+        while (pos < len && rules.length < MAX_RULES) {
+            const openBrace = textData.indexOf('{', pos);
+            if (openBrace === -1) break;
+            const closeBrace = textData.indexOf('}', openBrace + 1);
+            if (closeBrace === -1) break;
+            const selector = textData.substring(pos, openBrace).trim().toLowerCase();
+            const body = textData.substring(openBrace + 1, closeBrace);
+            pos = closeBrace + 1;
             if (!selector || !body) continue;
-            const size = (body.match(/font-size\s*:\s*(\d+(?:\.\d+)?(?:px|rem|em))/i) || [])[1] || '';
-            const weight = (body.match(/font-weight\s*:\s*(\d+|bold|normal)/i) || [])[1] || '';
-            const lh = (body.match(/line-height\s*:\s*([\d.]+)/i) || [])[1] || '';
-            const ls = (body.match(/letter-spacing\s*:\s*([-\d.]+(?:px|em|rem)?)/i) || [])[1] || '';
+            if (selector.startsWith('@media') || selector.startsWith('@keyframes') || selector.startsWith('@font-face') || selector.startsWith('@supports') || selector.startsWith('@layer')) {
+                let depth = 1;
+                while (pos < len && depth > 0) {
+                    const c = textData[pos];
+                    if (c === '{') depth++;
+                    else if (c === '}') depth--;
+                    pos++;
+                }
+                continue;
+            }
+            const size = (body.match(FONT_SIZE_RE) || [])[1] || '';
+            const weight = (body.match(WEIGHT_RE) || [])[1] || '';
+            const lh = (body.match(LH_RE) || [])[1] || '';
+            const ls = (body.match(LS_RE) || [])[1] || '';
             if (size) {
                 let spx = parseFloat(size);
-                if (size.endsWith('rem')) spx *= 16; else if (size.endsWith('em')) spx *= 16;
+                if (size.endsWith('rem') || size.endsWith('em')) spx *= 16;
                 const wv = weight === 'bold' ? 700 : weight === 'normal' ? 400 : parseInt(weight) || 0;
                 rules.push({ selector, sizePx: Math.round(spx), weight: wv, lineHeight: parseFloat(lh) || 0, letterSpacing: ls, body });
             }
@@ -1145,6 +1165,13 @@ function analyzeData(url, doc, textData) {
 
     const allWeights = [...new Set(cssRules.map(r => r.weight).filter(w => w > 0))].sort((a,b) => a - b);
 
+    // -- DARK MODE DETECTION --
+    const hasDarkMediaQuery = /@media\s*\([^)]*prefers-color-scheme\s*:\s*dark[^)]*\)/i.test(textData);
+    const darkModeClassEls = doc.querySelectorAll('[class*="dark-mode"],[class*="dark-theme"],[class*="darkMode"],[class*="darkTheme"],[data-theme="dark"],[data-mode="dark"]');
+    const hasDarkMode = hasDarkMediaQuery || darkModeClassEls.length > 0;
+    const darkModeToggles = doc.querySelectorAll('[class*="theme-toggle"],[class*="dark-toggle"],[class*="mode-toggle"],[class*="theme-switch"],button[aria-label*="theme"],button[aria-label*="dark"]');
+    const hasDarkModeToggle = darkModeToggles.length > 0;
+
     // -- HEADINGS --
     const headings = [];
     doc.querySelectorAll('h1,h2,h3,h4,h5,h6').forEach(h => { 
@@ -1215,6 +1242,27 @@ function analyzeData(url, doc, textData) {
         if(v && +v[1] >= 1000 && +v[1] <= 1600) wC[v[1]+'px']=(wC[v[1]+'px']||0)+1; 
     });
     const topWidths = Object.entries(wC).sort((a,b)=>b[1]-a[1]).slice(0,3);
+
+    // -- ANIMATIONS & TRANSITIONS --
+    const transitionRegex = /transition\s*:\s*([^;}]+)/g;
+    const trM = textData.match(transitionRegex) || [];
+    const transitionDurations = new Set();
+    trM.forEach(t => {
+        const durs = t.match(/(\d+(?:\.\d+)?s|[\d.]+ms)/g);
+        if (durs) durs.forEach(d => transitionDurations.add(d));
+    });
+
+    const animationRegex = /animation(?:-duration)?\s*:\s*([^;}]+)/g;
+    const anM = textData.match(animationRegex) || [];
+    const animationDurations = new Set();
+    anM.forEach(a => {
+        const durs = a.match(/(\d+(?:\.\d+)?s|[\d.]+ms)/g);
+        if (durs) durs.forEach(d => animationDurations.add(d));
+    });
+
+    const keyframesRegex = /@keyframes\s+([\w-]+)/g;
+    const kfMatches = textData.match(keyframesRegex) || [];
+    const keyframeNames = [...new Set(kfMatches.map(k => k.replace(/@keyframes\s+/, '')))].slice(0, 10);
 
     // -- DOM --
     const imgs = doc.querySelectorAll('img');
@@ -1322,6 +1370,57 @@ function analyzeData(url, doc, textData) {
     const surfaceCardHex = surfaceColors.length > 0 ? surfaceColors.find(([h]) => h !== canvasHex)?.[0] || canvasHex : canvasHex;
     const hairlineHex = brdSet.size > 0 ? [...brdSet][0] : '#e5e5e5';
 
+    // -- RICHER COLOR TOKENS --
+    const linkColorRules = cssRules.filter(r => /(^|[\s,>+~])a\b/i.test(r.selector));
+    let linkHex = primaryHex || '#0000ee';
+    for (const lr of linkColorRules) {
+        const lm = lr.body.match(/color\s*:\s*(#[0-9a-f]{6})/i);
+        if (lm) { linkHex = lm[1].toLowerCase(); break; }
+    }
+    const inkDeepHex = isDark ? (() => {
+        // On dark themes, ink-deep is the purest white text — prefer detected lightest text color
+        const lightestText = textColors.filter(([h]) => {
+            const l = luminance(...Object.values(hexToRgb(h))); return l > 0.9;
+        }).sort((a, b) => luminance(...Object.values(hexToRgb(b[0]))) - luminance(...Object.values(hexToRgb(a[0]))));
+        return lightestText.length > 0 ? lightestText[0][0] : '#ffffff';
+    })() : (() => {
+        const darkest = finalColors.find(([h]) => { const l = luminance(...Object.values(hexToRgb(h))); return l < 0.05 && h !== canvasHex; });
+        return darkest ? darkest[0] : '#000000';
+    })();
+    const inkSoftHex = (() => {
+        const {r,g,b} = hexToRgb(inkHex);
+        const shift = isDark ? 15 : -15;
+        return '#' + [r+shift, g+shift, b+shift].map(v => Math.max(0, Math.min(255, v)).toString(16).padStart(2,'0')).join('');
+    })();
+    const onInkHex = isDark ? '#ffffff' : canvasHex;
+    const surfaceElevatedHex = (() => {
+        const sc = hexToRgb(surfaceCardHex), cv = hexToRgb(canvasHex);
+        if (surfaceCardHex === canvasHex) {
+            // No distinct surface-card — create a subtle elevation from canvas
+            const shift = isDark ? 18 : -10;
+            return '#' + [cv.r+shift, cv.g+shift, cv.b+shift].map(v => Math.max(0, Math.min(255, v)).toString(16).padStart(2,'0')).join('');
+        }
+        return '#' + [Math.round((sc.r+cv.r)/2), Math.round((sc.g+cv.g)/2), Math.round((sc.b+cv.b)/2)].map(v => v.toString(16).padStart(2,'0')).join('');
+    })();
+    const surfaceSoftHex = (() => {
+        const cv = hexToRgb(canvasHex);
+        // On dark themes, surface-soft is slightly lighter than canvas; on light, slightly darker
+        const shift = isDark ? 10 : -10;
+        return '#' + [cv.r+shift, cv.g+shift, cv.b+shift].map(v => Math.max(0, Math.min(255, v)).toString(16).padStart(2,'0')).join('');
+    })();
+    const hairlineStrongHex = (() => {
+        const {r,g,b} = hexToRgb(hairlineHex);
+        const shift = isDark ? -20 : 20;
+        return '#' + [r+shift, g+shift, b+shift].map(v => Math.max(0, Math.min(255, v)).toString(16).padStart(2,'0')).join('');
+    })();
+    const bodyStrongHex = (() => {
+        if (bodyHex !== inkHex) {
+            const {r,g,b} = hexToRgb(bodyHex);
+            return '#' + [r+15, g+15, b+15].map(v => Math.max(0, Math.min(255, v)).toString(16).padStart(2,'0')).join('');
+        }
+        return inkHex;
+    })();
+
     // -- Typography scale mapping --
     const tLabels = ['display-xxl', 'display-xl', 'display-lg', 'display-md', 'display-sm', 'title-lg', 'title-md', 'title-sm', 'body-lg', 'body-md', 'caption', 'button', 'nav'];
 
@@ -1336,15 +1435,15 @@ function analyzeData(url, doc, textData) {
     }
     // Ensure common tokens exist
     const ensureRounded = (token, fallback) => { if (!roundedEntries.find(r => r.token === token)) roundedEntries.push({ token, px: fallback }); };
-    ensureRounded('none', 0); ensureRounded('sm', 4); ensureRounded('md', 6); ensureRounded('lg', 8); ensureRounded('xl', 12); ensureRounded('pill', 9999);
+    ensureRounded('none', 0); ensureRounded('xs', 2); ensureRounded('sm', 4); ensureRounded('md', 6); ensureRounded('lg', 8); ensureRounded('xl', 12); ensureRounded('full', 9999);
     roundedEntries.sort((a, b) => a.px - b.px);
 
     // -- Spacing tokens from sortedSpacing --
     const spacingEntries = [];
     const spacingTokenMap = [
-        { token: 'xs', maxPx: 4 }, { token: 'sm', maxPx: 8 }, { token: 'md', maxPx: 12 },
-        { token: 'base', maxPx: 16 }, { token: 'lg', maxPx: 24 }, { token: 'xl', maxPx: 32 },
-        { token: 'xxl', maxPx: 48 }, { token: 'section', maxPx: 80 }
+        { token: 'xxs', maxPx: 4 }, { token: 'xs', maxPx: 8 }, { token: 'sm', maxPx: 12 },
+        { token: 'md', maxPx: 16 }, { token: 'lg', maxPx: 24 }, { token: 'xl', maxPx: 32 },
+        { token: 'xxl', maxPx: 48 }, { token: 'section', maxPx: 80 }, { token: 'section-lg', maxPx: 96 }
     ];
     spacingTokenMap.forEach(({ token, maxPx }) => {
         const match = sortedSpacing.find(v => v <= maxPx && v > (spacingEntries.length > 0 ? spacingEntries[spacingEntries.length - 1].px : 0));
@@ -1376,7 +1475,7 @@ function analyzeData(url, doc, textData) {
 
     // ===== BUILD YAML FRONT MATTER =====
     let md = '---\n';
-    md += 'version: "1.0"\n';
+    md += 'version: alpha\n';
     md += 'name: "' + siteName + '"\n';
 
     // Description
@@ -1385,28 +1484,50 @@ function analyzeData(url, doc, textData) {
     if (mainFont) descParts.push('using ' + fontName);
     if (primaryHex) descParts.push('with ' + colorLabel(primaryHex).toLowerCase() + ' accent');
     md += 'description: "' + descParts.join(' ') + '. Canvas ' + canvasHex + ', primary accent ' + (primaryHex || 'none') + ', type ' + fontName + '.\"\n';
+    md += 'dark-mode: ' + (hasDarkMode ? '"detected"' : '"not-detected"') + '\n';
+    if (keyframeNames.length > 0 || transitionDurations.size > 0 || animationDurations.size > 0) {
+        md += 'animations:\n';
+        if (keyframeNames.length > 0) md += '  keyframes: [' + keyframeNames.map(k => '"' + k + '"').join(', ') + ']\n';
+        if (transitionDurations.size > 0) md += '  transition-durations: [' + [...transitionDurations].map(d => '"' + d + '"').join(', ') + ']\n';
+        if (animationDurations.size > 0) md += '  animation-durations: [' + [...animationDurations].map(d => '"' + d + '"').join(', ') + ']\n';
+    }
 
     // Colors
     md += 'colors:\n';
     md += '  primary: "' + (primaryHex || canvasHex) + '"\n';
     md += '  on-primary: "' + onPrimaryHex + '"\n';
     md += '  ink: "' + inkHex + '"\n';
+    md += '  ink-deep: "' + inkDeepHex + '"\n';
+    md += '  ink-soft: "' + inkSoftHex + '"\n';
+    md += '  on-ink: "' + onInkHex + '"\n';
     md += '  body: "' + bodyHex + '"\n';
+    if (bodyStrongHex !== inkHex && bodyStrongHex !== bodyHex) md += '  body-strong: "' + bodyStrongHex + '"\n';
     md += '  muted: "' + mutedHex + '"\n';
     md += '  canvas: "' + canvasHex + '"\n';
-    if (surfaceCardHex !== canvasHex) md += '  surface-card: "' + surfaceCardHex + '"\n';
+    if (surfaceCardHex !== canvasHex) {
+        md += '  surface-card: "' + surfaceCardHex + '"\n';
+        md += '  surface-elevated: "' + surfaceElevatedHex + '"\n';
+        md += '  surface-soft: "' + surfaceSoftHex + '"\n';
+    }
     md += '  hairline: "' + hairlineHex + '"\n';
+    md += '  hairline-strong: "' + hairlineStrongHex + '"\n';
+    md += '  link: "' + linkHex + '"\n';
     semanticMatches.forEach(s => { md += '  ' + s.token + ': "' + s.hex + '"\n'; });
 
     // Typography
     md += 'typography:\n';
-    md += '  font-family: "' + (mainFontStack || fontName) + '"\n';
-    md += '  scale:\n';
     topSizes.forEach((s, i) => {
         const t = i < tLabels.length ? tLabels[i] : 'size-' + s.px;
         const lh = s.lineHeight > 0 ? s.lineHeight : (s.px >= 32 ? 1.2 : s.px >= 18 ? 1.4 : 1.5);
         const w = s.weight > 0 ? s.weight : 400;
-        md += '    ' + t + ': { size: "' + s.px + 'px", weight: "' + w + '", line-height: "' + lh + '" }\n';
+        const ff = mainFontStack || fontName || 'system-ui, sans-serif';
+        const ls = s.letterSpacing || '0';
+        md += '  ' + t + ':\n';
+        md += '    fontFamily: "' + ff + '"\n';
+        md += '    fontSize: ' + s.px + 'px\n';
+        md += '    fontWeight: ' + w + '\n';
+        md += '    lineHeight: ' + lh + '\n';
+        md += '    letterSpacing: ' + ls + '\n';
     });
 
     // Rounded
@@ -1419,20 +1540,122 @@ function analyzeData(url, doc, textData) {
 
     // Components
     md += 'components:\n';
-    if (navEl) { const navLinks = navEl.querySelectorAll('a').length; md += '  nav-bar-top: { height: "' + btnH + 'px", background: "{colors.canvas}", links: ' + navLinks + ' }\n'; }
-    if (btns.length > 0) md += '  button-primary: { height: "' + btnH + 'px", radius: "{rounded.sm}", padding: "{spacing.sm} {spacing.lg}" }\n';
-    if (btnTypes.includes('outline')) md += '  button-outline: { height: "' + btnH + 'px", radius: "{rounded.sm}", border: "{colors.primary}" }\n';
-    if (btnTypes.includes('secondary')) md += '  button-secondary: { height: "' + btnH + 'px", radius: "{rounded.sm}", background: "' + (surfaceCardHex !== canvasHex ? '{colors.surface-card}' : '{colors.canvas}') + '" }\n';
-    if (btnTypes.includes('text')) md += '  button-text: { height: "' + btnH + 'px", radius: "{rounded.sm}", color: "{colors.primary}" }\n';
-    if (btnTypes.includes('icon')) md += '  button-icon: { height: "' + btnH + 'px", radius: "{rounded.pill}" }\n';
-    if (inputs.length > 0) md += '  text-input: { height: "' + inputH + 'px", radius: "{rounded.sm}" }\n';
-    if (imgs.length > 0) md += '  card-product: { radius: "{rounded.' + cardRoundedToken + '}" }\n';
-    if (sliders.length > 0) md += '  carousel: { instances: ' + sliders.length + ' }\n';
-    if (modals.length > 0) md += '  modal-overlay: { instances: ' + modals.length + ' }\n';
-    if (forms.length > 0) md += '  form: { instances: ' + forms.length + ' }\n';
-    if (breadcrumbs.length > 0) md += '  breadcrumbs: { present: true }\n';
-    if (tabs.length > 0) md += '  category-tab: { instances: ' + tabs.length + ' }\n';
-    if (footerEl) { const fLinks = footerEl.querySelectorAll('a').length; md += '  footer: { links: ' + fLinks + ', background: "{colors.canvas}" }\n'; }
+    if (navEl) {
+        const navLinks = navEl.querySelectorAll('a').length;
+        md += '  nav-bar-top:\n';
+        md += '    description: "Navigation bar with ' + navLinks + ' links, pinned to top"\n';
+        md += '    backgroundColor: "{colors.canvas}"\n';
+        md += '    textColor: "{colors.' + (isDark ? 'on-ink' : 'ink') + '}"\n';
+        md += '    typography: "{typography.body-md}"\n';
+        md += '    height: ' + btnH + 'px\n';
+        md += '    padding: 0 32px\n';
+        md += '    links: ' + navLinks + '\n';
+    }
+    if (btns.length > 0) {
+        md += '  button-primary:\n';
+        md += '    description: "Primary CTA — ' + btns.length + ' button(s), ~' + btnH + 'px height"\n';
+        md += '    backgroundColor: "{colors.' + (isDark ? 'canvas' : 'primary') + '}"\n';
+        md += '    textColor: "{colors.' + (isDark ? 'on-ink' : 'on-primary') + '}"\n';
+        md += '    typography: "{typography.button}"\n';
+        md += '    rounded: "{rounded.sm}"\n';
+        md += '    padding: {spacing.sm} {spacing.lg}\n';
+        md += '    height: ' + btnH + 'px\n';
+    }
+    if (btnTypes.includes('outline')) {
+        md += '  button-outline:\n';
+        md += '    description: "Outlined CTA — transparent background with border"\n';
+        md += '    backgroundColor: "{colors.canvas}"\n';
+        md += '    textColor: "{colors.' + (isDark ? 'on-ink' : 'primary') + '}"\n';
+        md += '    typography: "{typography.button}"\n';
+        md += '    rounded: "{rounded.sm}"\n';
+        md += '    padding: {spacing.sm} {spacing.lg}\n';
+        md += '    height: ' + btnH + 'px\n';
+        md += '    borderColor: "{colors.' + (isDark ? 'on-ink' : 'primary') + '}"\n';
+    }
+    if (btnTypes.includes('secondary')) {
+        md += '  button-secondary:\n';
+        md += '    description: "Secondary CTA — lower emphasis than primary"\n';
+        md += '    backgroundColor: "{colors.' + (surfaceCardHex !== canvasHex ? 'surface-card' : 'canvas') + '}"\n';
+        md += '    textColor: "{colors.' + (isDark ? 'on-ink' : 'ink') + '}"\n';
+        md += '    typography: "{typography.button}"\n';
+        md += '    rounded: "{rounded.sm}"\n';
+        md += '    padding: {spacing.sm} {spacing.lg}\n';
+        md += '    height: ' + btnH + 'px\n';
+    }
+    if (btnTypes.includes('text')) {
+        md += '  button-text:\n';
+        md += '    description: "Text-only CTA — no fill, no border, link-style"\n';
+        md += '    backgroundColor: "{colors.canvas}"\n';
+        md += '    textColor: "{colors.' + (isDark ? 'on-ink' : 'primary') + '}"\n';
+        md += '    typography: "{typography.link-md}"\n';
+        md += '    padding: {spacing.xxs} 0\n';
+    }
+    if (btnTypes.includes('icon')) {
+        md += '  button-icon:\n';
+        md += '    description: "Circular icon-only button for compact controls"\n';
+        md += '    backgroundColor: "{colors.' + (surfaceCardHex !== canvasHex ? 'surface-card' : 'canvas') + '}"\n';
+        md += '    textColor: "{colors.' + (isDark ? 'on-ink' : 'ink') + '}"\n';
+        md += '    rounded: "{rounded.full}"\n';
+        md += '    size: ' + btnH + 'px\n';
+    }
+    if (inputs.length > 0) {
+        md += '  text-input:\n';
+        md += '    description: "Text input field — ' + inputs.length + ' instance(s)"\n';
+        md += '    backgroundColor: "{colors.canvas}"\n';
+        md += '    textColor: "{colors.' + (isDark ? 'on-ink' : 'ink') + '}"\n';
+        md += '    typography: "{typography.body-md}"\n';
+        md += '    rounded: "{rounded.sm}"\n';
+        md += '    padding: {spacing.sm} {spacing.md}\n';
+        md += '    height: ' + inputH + 'px\n';
+    }
+    if (imgs.length > 0) {
+        md += '  card-product:\n';
+        md += '    description: "Product/content card with ' + imgs.length + ' image(s)"\n';
+        md += '    backgroundColor: "{colors.canvas}"\n';
+        md += '    textColor: "{colors.' + (isDark ? 'on-ink' : 'ink') + '}"\n';
+        md += '    rounded: "{rounded.' + cardRoundedToken + '}"\n';
+        md += '    padding: {spacing.xl}\n';
+    }
+    if (sliders.length > 0) {
+        md += '  carousel:\n';
+        md += '    description: "Carousel/slider — ' + sliders.length + ' instance(s)"\n';
+        md += '    instances: ' + sliders.length + '\n';
+    }
+    if (modals.length > 0) {
+        md += '  modal-overlay:\n';
+        md += '    description: "Modal dialog overlay — ' + modals.length + ' instance(s)"\n';
+        md += '    instances: ' + modals.length + '\n';
+    }
+    if (forms.length > 0) {
+        md += '  form:\n';
+        md += '    description: "Form container — ' + forms.length + ' form(s)"\n';
+        md += '    instances: ' + forms.length + '\n';
+    }
+    if (breadcrumbs.length > 0) {
+        md += '  breadcrumbs:\n';
+        md += '    description: "Breadcrumb navigation path indicators"\n';
+        md += '    present: true\n';
+    }
+    if (tabs.length > 0) {
+        md += '  category-tab:\n';
+        md += '    description: "Category tab switcher — ' + tabs.length + ' tab(s)"\n';
+        md += '    backgroundColor: "{colors.canvas}"\n';
+        md += '    textColor: "{colors.' + (isDark ? 'on-ink' : 'ink') + '}"\n';
+        md += '    typography: "{typography.label-uppercase}"\n';
+        md += '    rounded: "{rounded.full}"\n';
+        md += '    padding: {spacing.xs} {spacing.lg}\n';
+        md += '    instances: ' + tabs.length + '\n';
+    }
+    if (footerEl) {
+        const fLinks = footerEl.querySelectorAll('a').length;
+        md += '  footer:\n';
+        md += '    description: "Page footer — ' + fLinks + ' link(s)"\n';
+        md += '    backgroundColor: "{colors.' + (isDark ? 'ink' : 'canvas') + '}"\n';
+        md += '    textColor: "{colors.' + (isDark ? 'on-ink' : 'body') + '}"\n';
+        md += '    typography: "{typography.body-sm}"\n';
+        md += '    padding: {spacing.section}\n';
+        md += '    links: ' + fLinks + '\n';
+    }
 
     md += '---\n\n';
 
@@ -1458,7 +1681,27 @@ function analyzeData(url, doc, textData) {
     md += '- ' + fontName + ' across all surfaces — display, body, UI, buttons\n';
     if (topRadii.length > 0 && topRadii[0][0] > 0) md += '- Border radius ' + topRadii[0][0] + 'px — softened cards, sharp buttons\n';
     else md += '- Border radius 0px — rectangular silhouette throughout\n';
-    md += '- ' + btns.length + ' buttons, ' + inputs.length + ' inputs, ' + imgs.length + ' images, ' + links + ' links on page\n\n';
+    md += '- ' + btns.length + ' buttons, ' + inputs.length + ' inputs, ' + imgs.length + ' images, ' + links + ' links on page\n';
+    if (hasDarkMode) md += '- Dark mode ' + (hasDarkModeToggle ? 'with manual toggle' : 'via \`prefers-color-scheme\`') + '\n';
+    if (keyframeNames.length > 0) md += '- ' + keyframeNames.length + ' keyframe animation(s)\n';
+    md += '\n';
+
+    // -- Theme Mode --
+    if (hasDarkMode) {
+        md += '## Theme Mode\n\n';
+        md += '**Dark mode:** ';
+        if (hasDarkMediaQuery && hasDarkModeToggle) {
+            md += 'Supported via \`prefers-color-scheme\` media query with manual toggle (' + darkModeToggles.length + ' element(s)). ';
+        } else if (hasDarkMediaQuery) {
+            md += 'Automatic via \`prefers-color-scheme: dark\` media query. ';
+        } else if (hasDarkModeToggle) {
+            md += 'Manual toggle detected (' + darkModeToggles.length + ' element(s)). ';
+        }
+        if (darkModeClassEls.length > 0) {
+            md += 'Dark mode classes found on ' + darkModeClassEls.length + ' element(s). ';
+        }
+        md += '\n\n';
+    }
 
     // -- Colors --
     md += '## Colors\n\n';
@@ -1497,13 +1740,13 @@ function analyzeData(url, doc, textData) {
         md += 'System font stack. `' + (mainFontStack || '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif') + '`.\n\n';
     }
 
-    md += '### Hierarchy\n| Token | Size | Weight | Line Height | Use |\n|---|---|---|---|---|\n';
+    md += '### Hierarchy\n| Token | Size | Weight | Line Height | Letter Spacing | Use |\n|---|---|---|---|---|---|\n';
     topSizes.forEach((s, i) => {
         const t = i < tLabels.length ? tLabels[i] : 'size-' + s.px;
         const role = s.px >= 48 ? 'Hero / Display headline' : s.px >= 32 ? 'Section heading' : s.px >= 24 ? 'Card title, promo strip' : s.px >= 18 ? 'Lead paragraphs' : s.px >= 15 ? 'Default body, descriptions' : 'Caption, metadata, fine print';
         const w = s.weight > 0 ? s.weight : 400;
         const lh = s.lineHeight > 0 ? s.lineHeight : (s.px >= 32 ? 1.2 : s.px >= 18 ? 1.4 : 1.5);
-        md += '| `{typography.' + t + '}` | ' + s.px + 'px | ' + w + ' | ' + lh + ' | ' + role + ' |\n';
+        md += '| `{typography.' + t + '}` | ' + s.px + 'px | ' + w + ' | ' + lh + ' | ' + (s.letterSpacing || '0') + ' | ' + role + ' |\n';
     });
 
     md += '\n### Principles\n';
@@ -1516,8 +1759,15 @@ function analyzeData(url, doc, textData) {
         if (allWeights.length >= 2) md += 'Weight range: ' + allWeights[0] + ' to ' + allWeights[allWeights.length - 1] + '. ';
     }
     md += '\n\n### Note on Font Substitutes\n';
-    if (mainFontStack) md += 'Fallback: `' + mainFontStack + '`\n';
-    else md += 'System default: `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`\n';
+    if (mainFontStack) {
+        md += 'Fallback stack: `' + mainFontStack + '`\n\n';
+        md += 'If **' + fontName + '** is unavailable, closest open-source substitutes:\n';
+        md += '- **Inter** at weights 400/500/600/700 — slightly narrower; bump font-size by ~3% to compensate\n';
+        md += '- **Roboto** at weights 400/500/700 — flatter character; use as last-resort fallback\n';
+        md += '\nWhen swapping, set body line-height to 1.4 and display line-height to 1.0 explicitly.\n';
+    } else {
+        md += 'System default: `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`\n';
+    }
     md += '\n';
 
     // -- Layout --
@@ -1557,27 +1807,78 @@ function analyzeData(url, doc, textData) {
     });
     md += '\n';
 
+    // -- Decorative Depth --
+    if (shadows.length > 0 || brdSet.size > 0) {
+        md += '### Decorative Depth\n\n';
+        md += 'Depth cues come from ';
+        if (shadows.length > 0) md += 'layered box-shadows that create soft elevation tiers';
+        if (shadows.length > 0 && brdSet.size > 0) md += ' and ';
+        if (brdSet.size > 0) md += '1px hairline borders that define section boundaries';
+        md += '. The system relies on ' + (shadows.length > 0 ? 'shadow depth rather than color contrast' : 'color contrast rather than shadow depth') + ' to establish visual hierarchy.\n\n';
+    }
+
+    // -- Shapes --
+    md += '## Shapes\n\n';
+    md += '### Border Radius Scale\n\n';
+    md += '| Token | Value | Use |\n|---|---|---|\n';
+    roundedEntries.forEach(r => {
+        const use = r.px === 0 ? 'Universal default — buttons, cards, inputs' : r.px <= 4 ? 'Small elements, chips, toggles' : r.px <= 8 ? 'Cards, modals, containers' : r.px <= 16 ? 'Large cards, photo frames, hero bands' : 'Circular buttons, avatars, pill tags';
+        md += '| `{rounded.' + r.token + '}` | ' + r.px + 'px | ' + use + ' |\n';
+    });
+    md += '\n';
+    md += '### Photography Geometry\n\n';
+    if (imgs.length > 0) {
+        md += 'Product photography uses ' + (topRadii.find(([px]) => px >= 8) ? '`{rounded.' + cardRoundedToken + '}` frames' : 'sharp rectangular frames') + ' at every breakpoint. ';
+        md += 'Hero photography fills ' + (topWidths.length > 0 ? 'the full content width (~' + topWidths[0][0] + 'px)' : 'the full viewport width') + '. ';
+        md += 'Thumbnail grids use 1:1 square crops; hero and feature images use 16:9 or 21:9 widescreen ratios.\n\n';
+    } else {
+        md += 'Photography frames use `' + (topRadii.length > 0 ? '{rounded.' + radiusToken(topRadii[0][0]) + '}' : '{rounded.none}') + '` rounding. ';
+        md += 'No circular avatar masks detected — all image containers use rectilinear or softly-rounded geometry.\n\n';
+    }
+
+    // -- Animations & Transitions --
+    if (keyframeNames.length > 0 || transitionDurations.size > 0 || animationDurations.size > 0) {
+        md += '## Animations & Transitions\n\n';
+        if (transitionDurations.size > 0) {
+            md += '### Transition Durations\n';
+            md += '- ' + [...transitionDurations].sort().join(', ') + '\n\n';
+        }
+        if (animationDurations.size > 0) {
+            md += '### Animation Durations\n';
+            md += '- ' + [...animationDurations].sort().join(', ') + '\n\n';
+        }
+        if (keyframeNames.length > 0) {
+            md += '### Keyframe Animations\n';
+            keyframeNames.forEach(k => { md += '- \`' + k + '\`\n'; });
+            md += '\n';
+        }
+        md += '### Guidelines\n';
+        md += '- Use easing curves for natural motion\n';
+        md += '- Keep micro-interactions under 200ms\n';
+        md += '- Page transitions: 300\u2013500ms\n\n';
+    }
+
     // -- Components --
     md += '## Components\n\n';
     if (navEl) {
         const navLinks = navEl.querySelectorAll('a').length;
         md += '### Nav Bar\n';
-        md += '**`{components.nav-bar-top}`**: Navigation bar with ' + navLinks + ' links, pinned to top. Background `{colors.canvas}`.\n\n';
+        md += '**`{component.nav-bar-top}`**: Navigation bar with ' + navLinks + ' links, pinned to top. Background `{colors.canvas}`.\n\n';
     }
     if (headerEl && headerEl !== navEl) {
         md += '### Header\n';
-        md += '**`{components.header}`**: Page header with logo mark and primary CTAs.\n\n';
+        md += '**`{component.header}`**: Page header with logo mark and primary CTAs.\n\n';
     }
     if (btns.length > 0) {
         md += '### Button Primary\n';
-        md += '**`{components.button-primary}`**: ' + btns.length + ' buttons. Height ~' + btnH + 'px, rounded `{rounded.sm}`, padding `{spacing.sm} {spacing.lg}`.\n';
+        md += '**`{component.button-primary}`**: ' + btns.length + ' buttons. Height ~' + btnH + 'px, rounded `{rounded.sm}`, padding `{spacing.sm} {spacing.lg}`.\n';
         if (btnVariants.length > 0) md += '  - Variants: ' + btnVariants.map(v => '`-' + v.name + '`').join(', ') + '\n';
         if (btnTypes.length > 0) {
             const variantLines = [];
-            if (btnTypes.includes('outline')) variantLines.push('  - **`{components.button-outline}`**: Outlined — transparent background with `{colors.primary}` border.');
-            if (btnTypes.includes('secondary')) variantLines.push('  - **`{components.button-secondary}`**: Secondary — `' + (surfaceCardHex !== canvasHex ? '{colors.surface-card}' : '{colors.canvas}') + '` background.');
-            if (btnTypes.includes('text')) variantLines.push('  - **`{components.button-text}`**: Text-only — no fill, no border, `{colors.primary}` text.');
-            if (btnTypes.includes('icon')) variantLines.push('  - **`{components.button-icon}`**: Icon-only circular — `{rounded.pill}`.');
+            if (btnTypes.includes('outline')) variantLines.push('  - **`{component.button-outline}`**: Outlined — transparent background with `{colors.primary}` border.');
+            if (btnTypes.includes('secondary')) variantLines.push('  - **`{component.button-secondary}`**: Secondary — `' + (surfaceCardHex !== canvasHex ? '{colors.surface-card}' : '{colors.canvas}') + '` background.');
+            if (btnTypes.includes('text')) variantLines.push('  - **`{component.button-text}`**: Text-only — no fill, no border, `{colors.primary}` text.');
+            if (btnTypes.includes('icon')) variantLines.push('  - **`{component.button-icon}`**: Icon-only circular — `{rounded.full}`.');
             md += variantLines.join('\n') + '\n';
         }
         md += '\n';
@@ -1585,41 +1886,57 @@ function analyzeData(url, doc, textData) {
     if (inputs.length > 0) {
         const types = [...new Set([...inputs].map(i => i.type || i.tagName.toLowerCase()))].join(', ');
         md += '### Text Input\n';
-        md += '**`{components.text-input}`**: ' + inputs.length + ' fields (types: ' + types + '). Height ' + inputH + 'px, rounded `{rounded.sm}`.\n\n';
+        md += '**`{component.text-input}`**: ' + inputs.length + ' fields (types: ' + types + '). Height ' + inputH + 'px, rounded `{rounded.sm}`.\n\n';
     }
     if (imgs.length > 0) {
         md += '### Card Product\n';
-        md += '**`{components.card-product}`**: ' + imgs.length + ' images. Cards with rounded `{rounded.' + cardRoundedToken + '}`';
+        md += '**`{component.card-product}`**: ' + imgs.length + ' images. Cards with rounded `{rounded.' + cardRoundedToken + '}`';
         if (shadows.length > 0) md += ' and ' + shadows[0].level + ' shadow';
         md += '.\n\n';
     }
     if (sliders.length > 0) {
         md += '### Carousel\n';
-        md += '**`{components.carousel}`**: ' + sliders.length + ' carousel/slider instance(s).\n\n';
+        md += '**`{component.carousel}`**: ' + sliders.length + ' carousel/slider instance(s).\n\n';
     }
     if (modals.length > 0) {
         md += '### Modal\n';
-        md += '**`{components.modal-overlay}`**: ' + modals.length + ' overlay dialog(s).\n\n';
+        md += '**`{component.modal-overlay}`**: ' + modals.length + ' overlay dialog(s).\n\n';
     }
     if (forms.length > 0) {
         md += '### Form\n';
-        md += '**`{components.form}`**: ' + forms.length + ' form(s) on page.\n\n';
+        md += '**`{component.form}`**: ' + forms.length + ' form(s) on page.\n\n';
     }
     if (breadcrumbs.length > 0) {
         md += '### Breadcrumbs\n';
-        md += '**`{components.breadcrumbs}`**: Navigation path indicators.\n\n';
+        md += '**`{component.breadcrumbs}`**: Navigation path indicators.\n\n';
     }
     if (tabs.length > 0) {
         md += '### Category Tab\n';
-        md += '**`{components.category-tab}`**: ' + tabs.length + ' tab switch(es).\n\n';
+        md += '**`{component.category-tab}`**: ' + tabs.length + ' tab switch(es).\n\n';
     }
     if (footerEl) {
         const fLinks = footerEl.querySelectorAll('a').length;
         if (fLinks > 0) {
             md += '### Footer\n';
-            md += '**`{components.footer}`**: ' + fLinks + ' links in bottom navigation grid. Background `{colors.canvas}`.\n\n';
+            md += '**`{component.footer}`**: ' + fLinks + ' links in bottom navigation grid. Background `{colors.canvas}`.\n\n';
         }
     }
+
+    // -- Do's and Don'ts --
+    md += "## Do's and Don'ts\n\n";
+    md += '### Do\n';
+    md += '- Use `{colors.' + (primaryHex ? 'primary' : 'canvas') + '}` for primary CTAs, links, and interactive highlights — keep it reserved\n';
+    md += '- Set display headlines in `' + (mainFont || 'system font') + '` at weight ' + (allWeights.length > 0 ? allWeights[allWeights.length - 1] : 700) + ' with tight line-height\n';
+    md += '- Keep body copy at weight ' + (allWeights.length > 0 ? allWeights[0] : 400) + ' — the contrast between heavy display and light body is the typographic signature\n';
+    if (topRadii.length > 0 && topRadii[0][0] > 0) md += '- Use `{rounded.' + radiusToken(topRadii[0][0]) + '}` for cards and containers; keep buttons at `{rounded.' + radiusToken(Math.min(topRadii[0][0], 6)) + '}` or sharper\n';
+    else md += '- Use `{rounded.none}` (0px) by default — the sharp rectangular silhouette IS the brand\n';
+    md += '- Align spacing to `{spacing.section}` between major bands for grid-aligned vertical rhythm\n';
+    md += '\n### Don\'t\n';
+    md += '- Don\'t introduce accent colors outside the detected palette — the system is closed by design\n';
+    if (allWeights.length > 0 && allWeights[0] < 400) md += '- Don\'t bold body type — body stays at weight ' + allWeights[0] + '\n';
+    md += '- Don\'t add soft drop-shadows or atmospheric gradients where the brand uses hard borders and flat fills\n';
+    md += '- Don\'t round buttons above `{rounded.' + radiusToken(topRadii.length > 0 ? Math.min(topRadii[0][0], 6) : 4) + '}` — a soft button reads as a different brand\n';
+    md += '\n';
 
     // -- Responsive --
     md += '## Responsive Behavior\n\n';
@@ -1640,20 +1957,36 @@ function analyzeData(url, doc, textData) {
     if (imgs.length > 0) md += '- **Images**: responsive scaling with aspect ratio preservation\n';
     if (sliders.length > 0) md += '- **Carousels**: touch-swipe on mobile, arrows on desktop\n';
     md += '- **Grid**: columns reduce across breakpoints\n';
-    md += '- **Typography**: type scale compresses at mobile breakpoints\n\n';
+    md += '- **Typography**: type scale compresses at mobile breakpoints\n';
+    md += '\n### Image Behavior\n';
+    if (imgs.length > 0) {
+        md += '- Hero photography uses ' + (topRadii.length > 0 ? '`{rounded.' + radiusToken(topRadii[0][0]) + '}` frames' : 'sharp rectangular frames') + ' at every breakpoint\n';
+        md += '- Product thumbnails maintain 1:1 aspect ratio\n';
+        md += '- Lifestyle and feature photography uses 16:9 widescreen with horizontal cropping on mobile\n';
+    } else {
+        md += '- No product photography detected on the analyzed page\n';
+    }
+    md += '\n';
+
+    // -- Iteration Guide --
+    md += '## Iteration Guide\n\n';
+    md += '1. Focus on **ONE component** at a time — reference its YAML key (`{component.' + (btns.length > 0 ? 'button-primary' : 'text-input') + '}`)\n';
+    md += '2. Use **token references** everywhere (`{colors.primary}`, `{typography.display-xl}`, `{rounded.xl}`) — never inline hex\n';
+    md += '3. New components default to `{rounded.' + (topRadii.length > 0 ? radiusToken(topRadii[0][0]) : 'none') + '}` — only deviate for circular icons\n';
+    md += '4. Add new variants as separate component entries (`-pressed`, `-disabled`) — never bury state inside prose\n';
+    md += '5. Keep `{colors.primary}` scarce — at most two accent elements per viewport\n';
+    md += '\n';
 
     // -- Known Gaps --
     md += '## Known Gaps\n\n';
     const gaps = [];
     gaps.push('- Hover, focus, and active states are not extracted.');
-    gaps.push('- Animation and transition timings are out of scope.');
     gaps.push('- Form validation states are not extracted from static CSS alone.');
     if (!modals.length) gaps.push('- No modal or overlay dialogs detected.');
     if (navEl && !doc.querySelector('[class*="mobile"],[class*="hamburger"],[class*="burger"]')) gaps.push('- Mobile navigation pattern not detected.');
     const authenticatedPages = doc.querySelectorAll('[class*="account"],[class*="login"],[class*="dashboard"]');
     if (!authenticatedPages.length) gaps.push('- Authenticated pages (account, dashboard, checkout) were not analyzed.');
-    const darkModeToggle = doc.querySelectorAll('[class*="dark-mode"],[class*="theme-toggle"]');
-    if (!darkModeToggle.length && !isDark) gaps.push('- Dark mode variant not captured.');
+    if (!hasDarkMode && !isDark) gaps.push('- Dark mode variant not captured.');
     gaps.push('- Analysis based on top ' + cssRules.length + ' CSS rules from up to 5 stylesheets. Inline styles, shadow DOM, and dynamically injected CSS not captured.');
     gaps.forEach(g => md += g + '\n');
 
