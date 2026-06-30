@@ -14,24 +14,23 @@
     
     <style>
         :root {
-            /* Swiss Kinetic / High-Contrast Architectural Palette */
+            /* Tom Modern Design — Editorial-Technical Palette */
             --bg-color: #fafafa;
             --bg-grid: rgba(9, 9, 11, 0.03);
             --surface-color: #ffffff;
-            --border-color: #09090b; /* Deep black border */
+            --border-color: #09090b;
             --border-muted: #e4e4e7;
             --text-primary: #09090b;
             --text-secondary: #52525b;
             --text-muted: #a1a1aa;
             
-            --accent-color: #ff5a00; /* Vermillion / International Orange */
-            --accent-blue: #0043ff; /* Deep Cobalt Blue */
-            --accent-glow: rgba(0, 67, 255, 0.03);
+            --accent-color: #ff5a00; /* Single primary accent — vermillion */
+            --accent-hover: #e65100;
             
             --success-color: #059669;
             --error-color: #dc2626;
             
-            --radius-sm: 0px; /* Sharp architectural corners */
+            --radius-sm: 0px;
             --radius-md: 0px;
             --radius-lg: 0px;
             
@@ -124,7 +123,7 @@
         }
 
         .logo-text span {
-            color: var(--accent-blue);
+            color: var(--accent-color);
         }
 
         .header-meta {
@@ -249,7 +248,7 @@
         }
         
         #analyzeBtn:hover:not(:disabled) { 
-            background-color: var(--accent-blue);
+            background-color: var(--accent-color);
             color: #ffffff;
         }
         
@@ -285,7 +284,7 @@
         }
 
         .feature-card:hover {
-            border-color: var(--accent-blue);
+            border-color: var(--accent-color);
             transform: translateY(-2px);
         }
 
@@ -360,7 +359,7 @@
         .feature-card:hover .demo-typography {
             font-weight: 900;
             letter-spacing: 2px;
-            color: var(--accent-blue);
+            color: var(--accent-color);
         }
 
         /* Grid Demo */
@@ -379,7 +378,7 @@
 
         .feature-card:hover .demo-grid-cell {
             border-color: var(--accent-color);
-            background: var(--accent-glow);
+            background: rgba(255, 90, 0, 0.03);
         }
 
         .feature-card:hover .demo-grid-cell:nth-child(2n) {
