@@ -1108,9 +1108,34 @@ function analyzeData(url, doc, textData) {
     }).slice(0, 4);
 
     // -- FONTS (with icon font filtering) --
+    // 1. Extract fonts from @font-face rules
+    const fontFaceRegex = /@font-face\s*\{[^}]*font-family\s*:\s*["']?([^"'};]+)/gi;
+    const fontFaceFonts = new Set();
+    let ffm;
+    while (( ffm = fontFaceRegex.exec(textData)) !== null) {
+        const name = ffm[1].replace(/["']/g, '').trim();
+        if (name && !isIconFont(name) && !name.startsWith('var(')) fontFaceFonts.add(name);
+    }
+
+    // 2. Extract fonts from external font links (Google Fonts, Adobe Fonts, etc.)
+    const fontLinkRegex = /<link[^>]*href=["'][^"']*(?:fonts\.googleapis|fonts\.google|typekit|use\.edge|fast\.fonts|cloudflare)[^"']*["'][^>]*>/gi;
+    const fontLinks = textData.match(fontLinkRegex) || [];
+    const externalFontFamilies = new Set();
+    fontLinks.forEach(link => {
+        // Extract font families from Google Fonts URLs
+        const familyMatch = link.match(/family=([^&"']+)/g);
+        if (familyMatch) {
+            familyMatch.forEach(f => {
+                const family = f.replace('family=', '').split(':')[0].replace(/\+/g, ' ');
+                if (family && !isIconFont(family)) externalFontFamilies.add(family);
+            });
+        }
+    });
+
+    // 3. Extract fonts from CSS font-family declarations
     const fontRegex = /font-family\s*:\s*([^;}]+)/g;
     const fontMatches = textData.match(fontRegex) || [];
-    const fontCounts = {}; 
+    const fontCounts = {};
     let mainFontStack = '';
     fontMatches.forEach(f => {
         const raw = f.replace(/font-family\s*:\s*/, '').replace(/!important/g, '').trim();
@@ -1123,9 +1148,41 @@ function analyzeData(url, doc, textData) {
             }
         }
     });
-    const topFonts = Object.entries(fontCounts).sort((a,b) => b[1]-a[1]).slice(0, 3);
+
+    // 4. Merge all font sources — @font-face and external fonts get priority
+    const allFontSources = new Set([...fontFaceFonts, ...externalFontFamilies, ...Object.keys(fontCounts)]);
+    const fontScores = {};
+    allFontSources.forEach(name => {
+        let score = fontCounts[name] || 0;
+        // Boost @font-face fonts (custom fonts get +100)
+        if (fontFaceFonts.has(name)) score += 100;
+        // Boost external font service fonts (Google Fonts, etc.) (+50)
+        if (externalFontFamilies.has(name)) score += 50;
+        fontScores[name] = score;
+    });
+
+    const topFonts = Object.entries(fontScores).sort((a,b) => b[1]-a[1]).slice(0, 3);
     const mainFont = topFonts.length > 0 ? topFonts[0][0] : null;
     const secondaryFont = topFonts.length > 1 ? topFonts[1][0] : null;
+
+    // 5. Build mainFontStack from top fonts + common fallbacks
+    if (mainFont && !mainFontStack) {
+        // Find the original font-family declaration that contains the main font
+        const mainFontLower = mainFont.toLowerCase();
+        for (const f of fontMatches) {
+            const raw = f.replace(/font-family\s*:\s*/, '').replace(/!important/g, '').trim();
+            const stack = raw.split(',').map(s => s.replace(/["']/g, '').trim()).filter(s => s && !s.startsWith('var('));
+            if (stack.length > 1 && stack.some(s => s.toLowerCase() === mainFontLower)) {
+                mainFontStack = stack.join(', ');
+                break;
+            }
+        }
+        // If no multi-font stack found, build one with common fallbacks
+        if (!mainFontStack) {
+            const fallbacks = ['Arial', 'Helvetica', 'system-ui', 'sans-serif'];
+            mainFontStack = [mainFont, ...fallbacks.filter(f => f.toLowerCase() !== mainFontLower)].join(', ');
+        }
+    }
 
     // -- TYPOGRAPHY from CSS rules --
     const cssRules = extractCSSProps(textData);
@@ -1516,12 +1573,30 @@ function analyzeData(url, doc, textData) {
     semanticMatches.forEach(s => { md += '  ' + s.token + ': "' + s.hex + '"\n'; });
 
     // Typography
+    // Build font family string: custom font first, then fallback stack
+    const buildFontFamily = () => {
+        // If we detected a custom font via @font-face or external service
+        if (mainFont) {
+            const customLower = mainFont.toLowerCase();
+            // If mainFontStack already starts with the custom font, use it as-is
+            if (mainFontStack && mainFontStack.toLowerCase().startsWith(customLower)) {
+                return mainFontStack;
+            }
+            // Otherwise, prepend custom font to fallback stack
+            const fallbacks = mainFontStack || 'system-ui, sans-serif';
+            const fallbackList = fallbacks.split(',').map(s => s.trim()).filter(s => s && s.toLowerCase() !== customLower);
+            return mainFont + ', ' + fallbackList.join(', ');
+        }
+        return mainFontStack || fontName || 'system-ui, sans-serif';
+    };
+    const fontFamilyStr = buildFontFamily();
+
     md += 'typography:\n';
     topSizes.forEach((s, i) => {
         const t = i < tLabels.length ? tLabels[i] : 'size-' + s.px;
         const lh = s.lineHeight > 0 ? s.lineHeight : (s.px >= 32 ? 1.2 : s.px >= 18 ? 1.4 : 1.5);
         const w = s.weight > 0 ? s.weight : 400;
-        const ff = mainFontStack || fontName || 'system-ui, sans-serif';
+        const ff = fontFamilyStr;
         const ls = s.letterSpacing || '0';
         md += '  ' + t + ':\n';
         md += '    fontFamily: "' + ff + '"\n';
