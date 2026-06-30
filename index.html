@@ -1334,6 +1334,13 @@ function analyzeData(url, doc, textData) {
     const forms = doc.querySelectorAll('form');
     const tabs = doc.querySelectorAll('[class*="tab"], [role="tablist"]');
     const breadcrumbs = doc.querySelectorAll('[class*="breadcrumb"], [aria-label*="breadcrumb"]');
+    // Additional component detection
+    const badges = doc.querySelectorAll('[class*="badge"],[class*="pill"],[class*="tag"],[class*="chip"]');
+    const accordions = doc.querySelectorAll('[class*="accordion"],[class*="collapse"],[class*="faq"],[class*="expand"],details');
+    const promoStrips = doc.querySelectorAll('[class*="promo"],[class*="banner"],[class*="hero-strip"],[class*="cta-band"],[class*="callout"]');
+    const utilityBars = doc.querySelectorAll('[class*="utility"],[class*="topbar"],[class*="top-bar"],[class*="toolbar"]');
+    const cards = doc.querySelectorAll('[class*="card"],[class*="tile"],[class*="item"]');
+    const pills = doc.querySelectorAll('[class*="pill"],[class*="chip"],[class*="tag"]');
 
     // -- Component style extraction (stricter selectors, height via padding fallback) --
     function extractCompStyles(patterns) {
@@ -1689,6 +1696,42 @@ function analyzeData(url, doc, textData) {
         md += '    typography: "{typography.body-md}"\n';
         md += '    rounded: "{rounded.full}"\n';
         md += '    padding: {spacing.xs} {spacing.lg}\n';
+        md += '  category-tab-active:\n';
+        md += '    backgroundColor: "{colors.ink}"\n';
+        md += '    textColor: "{colors.on-ink}"\n';
+        md += '    rounded: "{rounded.full}"\n';
+    }
+    if (badges.length > 0) {
+        md += '  badge-pill-ink:\n';
+        md += '    backgroundColor: "{colors.ink}"\n';
+        md += '    textColor: "{colors.on-ink}"\n';
+        md += '    typography: "{typography.caption-md}"\n';
+        md += '    rounded: "{rounded.lg}"\n';
+        md += '    padding: 4px 8px\n';
+    }
+    if (accordions.length > 0) {
+        md += '  faq-row:\n';
+        md += '    backgroundColor: "{colors.canvas}"\n';
+        md += '    textColor: "{colors.ink}"\n';
+        md += '    typography: "{typography.body-md}"\n';
+        md += '    rounded: "{rounded.lg}"\n';
+        md += '    padding: {spacing.md} {spacing.xl}\n';
+    }
+    if (promoStrips.length > 0) {
+        md += '  promo-strip:\n';
+        md += '    backgroundColor: "{colors.ink}"\n';
+        md += '    textColor: "{colors.on-ink}"\n';
+        md += '    typography: "{typography.body-md}"\n';
+        md += '    rounded: "{rounded.xl}"\n';
+        md += '    padding: {spacing.xxl}\n';
+    }
+    if (utilityBars.length > 0) {
+        md += '  utility-strip:\n';
+        md += '    backgroundColor: "{colors.ink}"\n';
+        md += '    textColor: "{colors.on-ink}"\n';
+        md += '    typography: "{typography.caption-md}"\n';
+        md += '    height: 36px\n';
+        md += '    padding: 0 {spacing.xl}\n';
     }
     if (footerEl) {
         md += '  footer:\n';
@@ -1961,6 +2004,30 @@ function analyzeData(url, doc, textData) {
         md += 'Text-only labels in `{typography.body-md}`, rounded `{rounded.full}`, padding `{spacing.xs} {spacing.lg}`. ';
         md += 'Active state uses `{colors.ink}` background with `{colors.on-ink}` text.\n\n';
     }
+    if (badges.length > 0) {
+        md += '### Badge\n\n';
+        md += '**`{component.badge-pill-ink}`** — Filled tag pill for status indicators and labels. ';
+        md += 'Background `{colors.ink}`, text `{colors.on-ink}`, rounded `{rounded.lg}`, padding 4px 8px. ';
+        md += 'Used inline next to product titles to mark "New", "Sale", or featured indicators. ' + badges.length + ' instance(s) detected.\n\n';
+    }
+    if (accordions.length > 0) {
+        md += '### FAQ / Accordion\n\n';
+        md += '**`{component.faq-row}`** — Expandable accordion row for FAQ and content toggles. ';
+        md += 'Background `{colors.canvas}`, rounded `{rounded.lg}`, padding `{spacing.md} {spacing.xl}`. ';
+        md += '1px `{colors.hairline}` divider between rows. ' + accordions.length + ' instance(s) detected.\n\n';
+    }
+    if (promoStrips.length > 0) {
+        md += '### Promo Strip\n\n';
+        md += '**`{component.promo-strip}`** — Full-width promotional band for CTAs and announcements. ';
+        md += 'Background `{colors.ink}`, text `{colors.on-ink}`, rounded `{rounded.xl}`, padding `{spacing.xxl}`. ';
+        md += 'Used for hero CTAs, promotional messages, and section dividers. ' + promoStrips.length + ' instance(s) detected.\n\n';
+    }
+    if (utilityBars.length > 0) {
+        md += '### Utility Strip\n\n';
+        md += '**`{component.utility-strip}`** — Top-of-page utility bar for secondary navigation. ';
+        md += 'Background `{colors.ink}`, text `{colors.on-ink}`, height 36px, padding 0 {spacing.xl}. ';
+        md += 'Holds: locale picker, account links, cart icon. ' + utilityBars.length + ' instance(s) detected.\n\n';
+    }
     if (footerEl) {
         const fLinks = footerEl.querySelectorAll('a').length;
         if (fLinks > 0) {
@@ -1981,11 +2048,16 @@ function analyzeData(url, doc, textData) {
     if (topRadii.length > 0 && topRadii[0][0] > 0) md += '- Use `{rounded.' + radiusToken(topRadii[0][0]) + '}` for cards and containers; keep buttons at `{rounded.' + radiusToken(Math.min(topRadii[0][0], 6)) + '}` or sharper\n';
     else md += '- Use `{rounded.none}` (0px) by default — the sharp rectangular silhouette IS the brand\n';
     md += '- Align spacing to `{spacing.section}` between major bands for grid-aligned vertical rhythm\n';
+    md += '- Frame product photography inside `{rounded.' + cardRoundedToken + '}` containers; never use full-bleed circular masks\n';
+    md += '- Use `{typography.button}` for all button labels — uppercase with letter-spacing for that "machined" feel\n';
+    md += '- Pair white `{colors.canvas}` body bands with `{colors.surface-card}` alternating bands; let the surface contrast do the breathing\n';
     md += '\n### Don\'t\n';
     md += '- Don\'t introduce accent colors outside the detected palette — the system is closed by design\n';
     if (allWeights.length > 0 && allWeights[0] < 400) md += '- Don\'t bold body type — body stays at weight ' + allWeights[0] + '\n';
     md += '- Don\'t add soft drop-shadows or atmospheric gradients where the brand uses hard borders and flat fills\n';
     md += '- Don\'t round buttons above `{rounded.' + radiusToken(topRadii.length > 0 ? Math.min(topRadii[0][0], 6) : 4) + '}` — a soft button reads as a different brand\n';
+    md += '- Don\'t drop ink text opacity to create hierarchy — switch surface or shift to `{colors.muted}` instead\n';
+    md += '- Don\'t use decorative elements as inline noise; reserve them for hero bands and full-page banners\n';
     md += '\n';
 
     // -- Responsive --
