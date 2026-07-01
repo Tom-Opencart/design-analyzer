@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Новости LiveOpencart: Свежие Обновления для Вашего Магазина | Opencart Клуб</title>
+  <meta name="description"
+    content="Будьте в курсе последних новостей, обновлений и статей с LiveOpencart.ru. Все для успешного развития вашего интернет-магазина на Opencart.">
+  <meta name="keywords"
+    content="LiveOpencart, новости, обновления, статьи, интернет-магазин, OpenCart, модули, расширения">
+  <meta property="og:title" content="Новости LiveOpencart: Свежие Обновления для Вашего Магазина | Opencart Клуб">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://opencartforum.com.ru/liveopencart_news.html">
+  <meta property="og:description"
+    content="Будьте в курсе последних новостей, обновлений и статей с LiveOpencart.ru. Все для успешного развития вашего интернет-магазина на Opencart.">
+  <meta property="og:site_name" content="Opencart Клуб">
+  <meta property="og:locale" content="ru_RU">
+  <link rel="canonical" href="https://opencartforum.com.ru/liveopencart_news.html" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": "Новости LiveOpencart: Свежие Обновления для Вашего Магазина | Opencart Клуб",
+    "url": "https://opencartforum.com.ru/liveopencart_news.html",
+    "description": "Будьте в курсе последних новостей, обновлений и статей с LiveOpencart.ru. Все для успешного развития вашего интернет-магазина на Opencart."
+  }
+  </script>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/style.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-mono/style.css">
+  <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+</head>
+
+<body>
+    <div data-include="components/header.html"></div>
+
+  <section class="section-padding">
+    <div class="container">
+      <div class="row justify-content-center mb-5">
+        <div class="col-lg-10 text-center">
+          <h1 class="h1 fw-bold mb-4">Новости LiveOpencart</h1>
+          <p class="lead text-secondary">
+            Будьте в курсе последних новостей, обновлений и статей с сайта <a href="https://liveopencart.ru/"
+              target="_blank" class="text-primary-custom fw-bold">LiveOpencart.ru</a>.
+          </p>
+        </div>
+      </div>
+      <div class="row justify-content-center">
+        <div class="col-lg-10">
+          <h2 class="h2 fw-bold mb-4 text-center">Последние Новости</h2>
+          <div id="rss-feed-liveopencart" class="row">
+            <div class="news-loading">
+              <div class="spinner-border" role="status"></div>
+              <p>Загрузка последних новостей...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row justify-content-center mt-5">
+        <div class="col-lg-12">
+          <h2 class="h2 fw-bold mb-4 text-center">Новинки Модулей</h2>
+          <div id="new-modules-container" class="row">
+            <div class="news-loading">
+              <div class="spinner-border" role="status"></div>
+              <p>Загрузка последних модулей...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+    <div data-include="components/footer.html"></div>
+  <script src="js/main.js"></script>
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment-with-locales.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment-timezone/0.5.33/moment-timezone-with-data.min.js"></script>
+
+  <script>
+    $(document).ready(function () {
+      // Smooth scrolling for navigation links
+      $('a[href^="#"]').on('click', function (event) {
+        var target = $(this.getAttribute('href'));
+        if (target.length) {
+          event.preventDefault();
+          $('html, body').stop().animate({
+            scrollTop: target.offset().top - 80
+          }, 1000);
+        }
+      });
+
+      // Navbar background change on scroll
+      $(window).scroll(function () {
+        if ($(window).scrollTop() > 50) {
+          $('.navbar-custom').addClass('shadow-sm');
+        } else {
+          $('.navbar-custom').removeClass('shadow-sm');
+        }
+      });
+
+      // Function to load and display RSS feed
+      function loadRssFeed(feedUrl, containerId) {
+        const phpProxyUrl = 'get_rss_feed.php'; // Убедитесь, что это правильный путь
+
+        $.ajax({
+          url: phpProxyUrl + '?url=' + encodeURIComponent(feedUrl),
+          type: 'GET',
+          dataType: 'json',
+          success: function (response) {
+            if (response.status === 'ok') {
+              let output = '';
+              response.items.forEach(function (item) {
+                let pubDate = moment(item.pubDate).locale('ru').format('LLL');
+                let descriptionHtml = item.description ? `<p>${item.description}</p>` : '';
+
+                output += `
+                                    <div class="col-12 col-md-6 col-lg-6 mb-4">
+                                        <div class="rss-item h-100">
+                                            <h3><a href="${item.link}" target="_blank">${item.title}</a></h3>
+                                            ${descriptionHtml}
+                                            <div class="item-meta mt-auto pt-3">
+                                                <span>Опубликовано: ${pubDate}</span>
+                                                <span class="source">Источник: ${response.feed.title}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+              });
+              $('#' + containerId).addClass('row').html(output);
+            } else {
+              $('#' + containerId).html('<p class="alert alert-warning text-center">Не удалось загрузить RSS-ленту: ' + (response.message || 'Неизвестная ошибка.') + '</p>');
+              console.error('Ошибка загрузки RSS-ленты через PHP-прокси:', response.message);
+            }
+          },
+          error: function (xhr, status, error) {
+            let errorMessage = 'Произошла ошибка при запросе к PHP-прокси. Проверьте путь к файлу get_rss_feed.php и логи сервера.';
+            if (status === 'parsererror') {
+              errorMessage = 'Ошибка парсинга ответа от PHP-скрипта. Возможно, PHP-скрипт не вернул корректный JSON. Проверьте его вывод напрямую в браузере.';
+            } else if (status === 'timeout') {
+              errorMessage = 'Таймаут запроса к PHP-прокси. Сервер слишком долго отвечал.';
+            } else if (status === 'abort') {
+              errorMessage = 'Запрос был отменен.';
+            } else {
+              errorMessage = `AJAX Error: ${status} - ${error}. Проверьте консоль для подробностей.`;
+            }
+            $('#' + containerId).html('<p class="alert alert-danger text-center">' + errorMessage + '</p>');
+            console.error('AJAX Error к PHP-прокси:', status, error);
+            console.error('XHR Object:', xhr);
+          }
+        });
+      }
+
+      // НОВАЯ ФУНКЦИЯ: Загрузка и отображение новинок модулей
+      function loadNewModules(parserUrl, containerId) {
+        $.ajax({
+          url: parserUrl,
+          type: 'GET',
+          dataType: 'json',
+          success: function (response) {
+            if (response.status === 'ok') {
+              let output = '';
+              response.products.forEach(function (product) {
+                // priceHtml logic removed in favor of inline template literals
+
+                let stickersHtml = '';
+                if (product.stickers && product.stickers.length > 0) {
+                  stickersHtml = `<div class="july-stickers">`;
+                  product.stickers.forEach(function (sticker) {
+                    stickersHtml += `<div class="sticker">${sticker}</div>`;
+                  });
+                  stickersHtml += `</div>`;
+                }
+
+                output += `
+                  <div class="col-12 col-md-6 col-lg-3 mb-4">
+                    <div class="product-card">
+                      <div class="card-img-top-wrapper">
+                        <a href="${product.url}" target="_blank">
+                          <img src="${product.image}" alt="${product.name}" loading="lazy" class="card-img-top">
+                        </a>
+                        ${stickersHtml}
+                      </div>
+                      <div class="card-body">
+                        <h5 class="card-title"><a href="${product.url}" target="_blank">${product.name}</a></h5>
+                        <div class="price">
+                          ${product.price_new ? `<span class="price-new">${product.price_new}</span>` : ''}
+                          ${product.price_old ? `<span class="price-old">${product.price_old}</span>` : ''}
+                        </div>
+                         <a href="${product.url}" target="_blank" class="btn-buy mt-auto">Подробнее</a>
+                      </div>
+                    </div>
+                  </div>
+                `;
+              });
+              $('#' + containerId).html(output); // 'row' класс уже на контейнере #new-modules-container
+            } else {
+              $('#' + containerId).html('<p class="alert alert-warning text-center">Не удалось загрузить новинки модулей: ' + (response.error || 'Неизвестная ошибка.') + '</p>');
+              console.error('Ошибка загрузки новинок модулей:', response.error);
+            }
+          },
+          error: function (xhr, status, error) {
+            let errorMessage = 'Произошла ошибка при запросе к парсеру модулей. Проверьте путь к файлу parser_live.php и логи сервера.';
+            if (status === 'parsererror') {
+              errorMessage = 'Ошибка парсинга ответа от PHP-скрипта. Возможно, PHP-скрипт не вернул корректный JSON. Проверьте его вывод напрямую в браузере.';
+            } else if (status === 'timeout') {
+              errorMessage = 'Таймаут запроса к парсеру модулей. Сервер слишком долго отвечал.';
+            } else {
+              errorMessage = `AJAX Error: ${status} - ${error}. Проверьте консоль для подробностей.`;
+            }
+            $('#' + containerId).html('<p class="alert alert-danger text-center">' + errorMessage + '</p>');
+            console.error('AJAX Error к парсеру модулей:', status, error);
+            console.error('XHR Object:', xhr);
+          }
+        });
+      }
+
+      // Load content on page load
+      loadRssFeed('https://liveopencart.ru/news_site/?rss=2.0', 'rss-feed-liveopencart');
+      // Вызываем новую функцию для загрузки модулей
+      loadNewModules('parser_live.php', 'new-modules-container'); // Укажите правильный путь к parser_live.php
+    });
+  </script>
+</body>
+
+</html>

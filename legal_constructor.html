@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Конструктор юридических документов OpenCart | Opencart Клуб</title>
+  <meta name="description" content="Конструктор юридических документов (Оферта, Политика конфиденциальности, Согласия) по 152-ФЗ, 38-ФЗ и ГК РФ для интернет-магазинов на OpenCart.">
+  <meta name="keywords" content="конструктор документов, 152-ФЗ, оферта, политика персональных данных, OpenCart, генератор согласий">
+  <meta property="og:title" content="Конструктор юридических документов OpenCart | Opencart Клуб">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://opencartforum.com.ru/legal_constructor.html">
+  <meta property="og:description" content="Конструктор юридических документов (Оферта, Политика конфиденциальности, Согласия) по 152-ФЗ, 38-ФЗ и ГК РФ для интернет-магазинов на OpenCart.">
+  <meta property="og:site_name" content="Opencart Клуб">
+  <meta property="og:locale" content="ru_RU">
+  <link rel="canonical" href="https://opencartforum.com.ru/legal_constructor.html" />
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/style.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-mono/style.css">
+  <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="stylesheet" href="legal-pages-constructor/css/style.css?v=3.0.4.4">
+
+  <style>
+    * { border-radius: 0px !important; }
+    html, body {
+      height: auto !important;
+      overflow: auto !important;
+    }
+    .constructor-app-wrapper {
+      height: calc(100vh - 82px); /* header only */
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .constructor-app-wrapper .main {
+      height: calc(100vh - 82px - 56px) !important;
+    }
+    .constructor-app-wrapper, 
+    .constructor-app-wrapper input, 
+    .constructor-app-wrapper button, 
+    .constructor-app-wrapper select, 
+    .constructor-app-wrapper textarea {
+      font-family: 'Inter', sans-serif !important;
+    }
+    /* Legacy variable aliases */
+    :root { --border-color: var(--tm-line); --primary-color: var(--tm-text); --light-bg: var(--tm-surface-alt); --text-color: var(--tm-text); --secondary-color: var(--tm-muted); }
+    /* Force shared footer appearance over Bootstrap */
+    .site-footer {
+      padding: 48px 0 !important;
+      border-top: 1px solid var(--tm-line-muted) !important;
+      background: var(--tm-surface) !important;
+      color: var(--tm-text-secondary) !important;
+      font-family: var(--tm-font-sans) !important;
+    }
+    .site-footer .footer-grid { display: grid !important; grid-template-columns: 2fr 1fr 1fr !important; gap: 42px !important; }
+    .site-footer .footer-grid strong { display: block !important; margin-bottom: 12px !important; font-size: 16px !important; text-transform: uppercase !important; letter-spacing: 0.06em !important; color: var(--tm-text) !important; }
+    .site-footer .footer-grid p { color: var(--tm-text-secondary) !important; font-size: 14px !important; line-height: 1.6 !important; }
+    .site-footer .footer-grid span { display: block !important; margin-bottom: 12px !important; font-family: var(--tm-font-mono) !important; font-size: 11px !important; font-weight: 700 !important; letter-spacing: 0.12em !important; text-transform: uppercase !important; color: var(--tm-muted) !important; }
+    .site-footer .footer-grid a { display: block !important; padding: 4px 0 !important; font-size: 14px !important; color: var(--tm-text-secondary) !important; text-decoration: none !important; }
+    .site-footer .footer-grid a:hover { color: var(--tm-text) !important; }
+    .site-footer .footer-bottom { display: flex !important; align-items: center !important; justify-content: space-between !important; margin-top: 42px !important; padding-top: 24px !important; border-top: 1px solid var(--tm-line-muted) !important; }
+    .site-footer .footer-bottom p { font-size: 13px !important; color: var(--tm-muted) !important; margin: 0 !important; }
+    .site-footer .footer-bottom a { display: inline-flex !important; align-items: center !important; gap: 6px !important; font-family: var(--tm-font-mono) !important; font-size: 12px !important; font-weight: 700 !important; letter-spacing: 0.06em !important; text-transform: uppercase !important; color: var(--tm-muted) !important; text-decoration: none !important; }
+    .site-footer .footer-bottom a:hover { color: var(--tm-text) !important; }
+    @media (max-width: 980px) { .site-footer .footer-grid { grid-template-columns: 1fr 1fr !important; } }
+    @media (max-width: 560px) { .site-footer .footer-grid { grid-template-columns: 1fr !important; } .site-footer .footer-bottom { flex-direction: column !important; gap: 12px !important; text-align: center !important; } }
+  </style>
+</head>
+
+<body>
+  <div data-include="components/header.html"></div>
+
+
+  <div id="app" class="constructor-app-wrapper">
+    <header class="header">
+      <div class="header-left">
+        <button class="btn-icon-mobile" id="hamburgerBtn" title="Меню">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+        <div class="header-brand">
+          <div class="header-title">Документы по 152-ФЗ, 38-ФЗ и ГК РФ</div>
+          <div class="header-meta">
+            <span>Автор Tom</span>
+            <span class="build-indicator">v3.0.4.3</span>
+          </div>
+        </div>
+      </div>
+      <div class="header-center">
+        <!-- ФИО / Организация input -->
+        <div class="hint-wrapper hint-wrapper--title">
+          <span class="slug-hint">ФИО:</span>
+          <input type="text" class="header-title-input" id="headerFullName" placeholder="Иванов Иван Иванович">
+        </div>
+        <!-- Сайт (домен) input -->
+        <div class="hint-wrapper hint-wrapper--domain">
+          <span class="slug-hint">Сайт:</span>
+          <input type="text" class="header-domain-input" id="headerSiteName" placeholder="myshop.ru">
+        </div>
+      </div>
+      <div class="header-right">
+        <button class="btn btn-ghost" id="helpBtn" title="Справка">? Справка</button>
+        <button class="btn btn-secondary btn-icon" id="settingsBtn" title="Настройки">⚙️</button>
+        <button class="btn btn-success" id="copyBtn">Копировать код</button>
+      </div>
+    </header>
+
+    <div class="main">
+      <aside class="panel-left">
+        <div class="block-buttons" id="docTabs">
+          <div class="palette-group-title">Магазин</div>
+          <button class="block-btn" id="sidebarSettingsBtn">
+            <span class="block-btn-icon">⚙️</span>
+            <span>Заполнить реквизиты</span>
+          </button>
+
+          <div class="palette-group-title">Документы</div>
+          
+          <button class="block-btn block-btn--active" data-doc="offer">
+            <span class="block-btn-icon">📜</span>
+            <span>Публичная оферта</span>
+          </button>
+          <button class="block-btn" data-doc="policy">
+            <span class="block-btn-icon">🛡️</span>
+            <span>Политика конфиденциальности</span>
+          </button>
+          <button class="block-btn" data-doc="consent">
+            <span class="block-btn-icon">✍️</span>
+            <span>Согласие на обработку персональных данных</span>
+          </button>
+          <button class="block-btn" data-doc="agreement">
+            <span class="block-btn-icon">🤝</span>
+            <span>Пользовательское соглашение</span>
+          </button>
+          <button class="block-btn" data-doc="newsletter">
+            <span class="block-btn-icon">✉️</span>
+            <span>Согласие на рассылку</span>
+          </button>
+          <button class="block-btn" data-doc="cookie">
+            <span class="block-btn-icon">🍪</span>
+            <span>Политика использования Cookie</span>
+          </button>
+          
+          <div class="palette-group-title">Навигация</div>
+          <button class="block-btn block-btn--nav" id="btnNavArticle">
+            <span class="block-btn-icon">📝</span>
+            <span>Конструктор статей</span>
+          </button>
+        </div>
+        
+        <div class="panel-support">
+          <button class="block-btn donate-btn" id="donateBtn" title="Отблагодарить автора">
+            <span class="block-btn-icon"><i class="fa fa-heart"></i></span>
+            <span class="block-btn-label" style="font-weight: 600;">Отблагодарить</span>
+          </button>
+        </div>
+      </aside>
+
+      <div class="workspace">
+        <div class="editor-sheet">
+          <button class="editor-sheet-copy-btn" id="sheetCopyBtn" title="Копировать HTML-код">
+            <i class="fa fa-clone"></i>
+          </button>
+          <div class="editor-sheet-header">
+            <h2 class="editor__title" id="editorTitle">Публичная оферта</h2>
+          </div>
+          <div class="editor-helper-hint">
+            <i class="fa-solid fa-pen-to-square"></i> Текст ниже можно редактировать — просто нажмите в любом месте и начните вносить изменения.
+          </div>
+          <div class="editor__content" id="editor" contenteditable="true"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile Sidebar Overlay -->
+  <div class="mobile-sidebar-overlay" id="mobileSidebarOverlay">
+    <div class="mobile-sidebar" id="mobileSidebar">
+      <div class="mobile-sidebar-header">
+        <span class="mobile-sidebar-title">Документы</span>
+        <button class="mobile-sidebar-close" id="mobileSidebarClose">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="mobile-sidebar-content" id="mobileSidebarContent"></div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div class="modal-overlay" id="settingsModal">
+    <div class="modal-window">
+      <div class="modal-header">
+        <h2>Настройки магазина</h2>
+        <button class="modal-close" id="settingsClose">✕</button>
+      </div>
+      <div class="modal-body">
+        <form id="settingsForm">
+          <div class="form-group">
+            <label>Тип собственника</label>
+            <select name="owner_type">
+              <option value="ИП">ИП</option>
+              <option value="ООО">ООО</option>
+              <option value="Самозанятый">Самозанятый</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>ФИО / Название организации</label>
+            <input type="text" name="full_name" placeholder="Иванов Иван Иванович">
+          </div>
+          <div class="form-group">
+            <label>ИНН</label>
+            <input type="text" name="inn" placeholder="212408956567">
+          </div>
+          <div class="form-group">
+            <label>ОГРНИП / ОГРН</label>
+            <input type="text" name="ogrn" placeholder="318213000027412">
+          </div>
+          <div class="form-group">
+            <label>Юридический адрес</label>
+            <input type="text" name="legal_address" placeholder="г. Москва, ул. Примерная, д. 1">
+          </div>
+          <div class="form-group">
+            <label>Фактический адрес</label>
+            <input type="text" name="actual_address" placeholder="г. Москва, ул. Примерная, д. 1">
+          </div>
+          <div class="form-group">
+            <label>Телефон</label>
+            <input type="tel" name="phone" placeholder="+7 (999) 123-45-67">
+          </div>
+          <div class="form-group">
+            <label>Email для связи</label>
+            <input type="email" name="email" placeholder="info@example.com">
+          </div>
+          <div class="form-group">
+            <label>Email для отзыва согласия</label>
+            <input type="email" name="email_consent" placeholder="info@example.com">
+          </div>
+          <div class="form-group">
+            <label>Название сайта (домен)</label>
+            <input type="text" name="site_name" placeholder="example.ru">
+          </div>
+
+          <h3 class="form-section-title">Банковские реквизиты</h3>
+          <div class="form-group">
+            <label>Наименование банка</label>
+            <input type="text" name="bank_name" placeholder='АО "Альфа-Банк"'>
+          </div>
+          <div class="form-group">
+            <label>БИК</label>
+            <input type="text" name="bik" placeholder="042202824">
+          </div>
+          <div class="form-group">
+            <label>Корр/счёт</label>
+            <input type="text" name="corr_account" placeholder="30101810200000000824">
+          </div>
+          <div class="form-group">
+            <label>Расчётный счёт</label>
+            <input type="text" name="reg_account" placeholder="40802810229040009656">
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" id="settingsSave">Сохранить и начать</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Help Modal -->
+  <div class="modal-overlay" id="helpModal">
+    <div class="modal-window" style="max-width: 650px; width: 90%;">
+      <div class="modal-header">
+        <h2>⚖️ Справка и руководство</h2>
+        <button class="modal-close" id="helpClose">✕</button>
+      </div>
+      <div class="modal-body help-modal-body">
+        <section class="help-section">
+          <h3>Как пользоваться конструктором</h3>
+          <ol class="help-steps">
+            <li>
+              <strong>Заполните реквизиты:</strong> Нажмите кнопку <strong>«Заполнить реквизиты»</strong> в левой панели или иконку ⚙️ вверху. Данные вашего магазина мгновенно подставятся во все документы.
+            </li>
+            <li>
+              <strong>Отредактируйте текст (при необходимости):</strong> Выберите документ слева. Текст на листе можно менять напрямую (кликните в любом месте). Вы можете выделять текст и форматировать его: <code>Ctrl + B</code> (жирный), <code>Ctrl + I</code> (курсив), <code>Ctrl + U</code> (подчеркивание).
+            </li>
+            <li>
+              <strong>Скопируйте HTML-код:</strong> Нажмите кнопку <strong>«Копировать код»</strong> (наверху или в углу листа). Вы получите чистый, семантический HTML-код.
+            </li>
+            <li>
+              <strong>Вставьте в OpenCart:</strong> В админке перейдите в <em>Каталог → Информация</em>, добавьте/откройте нужную страницу и вставьте скопированный HTML в поле редактора.<br><br>
+              Способ зависит от используемого редактора:
+              <ul style="margin-top: 6px;">
+                <li>
+                  <strong>Summernote</strong> (стандартный в OpenCart 3) —
+                  нажмите иконку <code>&lt;/&gt;</code> («режим исходного кода») в панели инструментов редактора,
+                  вставьте скопированный HTML, затем снова нажмите <code>&lt;/&gt;</code> чтобы выйти из режима кода и сохраните страницу.
+                </li>
+                <li style="margin-top: 4px;">
+                  <strong>CKEditor</strong> —
+                  нажмите кнопку <strong>«Источник»</strong> в панели инструментов,
+                  вставьте HTML, снова нажмите <strong>«Источник»</strong> и сохраните страницу.
+                </li>
+              </ul>
+            </li>
+          </ol>
+        </section>
+
+        <section class="help-section help-integration">
+          <h3><i class="fa-solid fa-link"></i> Взаимодействие с «Конструктором статей»</h3>
+          <p>
+            Этот инструмент является частью экосистемы модулей для OpenCart и тесно интегрирован с 
+            <a href="https://tom-opencart.github.io/opencart-content-constructor/" target="_blank">Конструктором статей (Content Constructor)</a>:
+          </p>
+          <ul>
+            <li>
+              <strong>Синхронизация домена:</strong> Домен вашего сайта (из поля «Сайт») сохраняется в общем хранилище <code>localStorage</code> и автоматически синхронизируется между конструкторами.
+            </li>
+            <li>
+              <strong>Связывание страниц:</strong> После того как вы скопировали код документа и создали статью в админке OpenCart (например, с ID 3, ссылка: <code>index.php?route=information/information&amp;information_id=3</code>), вы можете использовать эту ссылку в Конструкторе статей.
+            </li>
+            <li>
+              <strong>Размещение в формах:</strong> Вставляйте полученные ссылки на соглашения в футер сайта, в формы подписки на рассылку или формы обратной связи, созданные в Конструкторе статей, чтобы полностью соблюсти законы 152-ФЗ и 38-ФЗ.
+            </li>
+          </ul>
+        </section>
+
+        <section class="help-section help-warning">
+          <h3><i class="fa-solid fa-triangle-exclamation"></i> Важное примечание о стилях</h3>
+          <p>
+            Экспортируемый HTML-код намеренно очищен от инлайн-стилей, классов и лишних тегов <code>&lt;div&gt;</code>. Это сделано для того, чтобы тексты автоматически наследовали шрифты, отступы и стили Bootstrap 3 вашей активной темы OpenCart 3 и выглядели гармонично без ручной настройки.
+          </p>
+        </section>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="helpCloseBtn">Закрыть</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Donate Modal -->
+  <div class="modal-overlay" id="donateModal">
+    <div class="modal-window" style="width: 450px;">
+      <div class="modal-header">
+        <h2>Поддержать проект</h2>
+        <button class="modal-close" id="donateClose">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="donate-intro">
+          <div class="donate-icon-wrapper">
+            <i class="fa-solid fa-heart donate-heart-pulse"></i>
+          </div>
+          <div class="donate-text">
+            Если конструктор сэкономил ваше время и помог запустить магазин быстрее — вы можете отблагодарить автора. Спасибо за поддержку!
+          </div>
+        </div>
+        
+        <div class="payment-methods">
+          <!-- ЮMoney (карта) -->
+          <div class="payment-card">
+            <div class="payment-card-icon card-color-yoomoney">
+              <i class="fa-solid fa-ruble-sign"></i>
+            </div>
+            <div class="payment-card-details">
+              <div class="payment-label">ЮMoney карта</div>
+              <div class="payment-value-container">
+                <span class="payment-value">5599 0021 3241 5086</span>
+                <button class="btn-copy-payment" data-value="5599 0021 3241 5086" title="Скопировать"><i class="fa fa-clone"></i></button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ЮMoney (кошелёк) -->
+          <div class="payment-card">
+            <div class="payment-card-icon card-color-yoomoney">
+              <i class="fa-solid fa-wallet"></i>
+            </div>
+            <div class="payment-card-details">
+              <div class="payment-label">ЮMoney кошелёк</div>
+              <div class="payment-value-container">
+                <span class="payment-value">4100112176183832</span>
+                <button class="btn-copy-payment" data-value="4100112176183832" title="Скопировать"><i class="fa fa-clone"></i></button>
+              </div>
+              <a class="donate-yoomoney-link" href="https://yoomoney.ru/to/4100112176183832" target="_blank">Перейти к переводу на ЮMoney</a>
+            </div>
+          </div>
+
+          <!-- PayPal -->
+          <div class="payment-card">
+            <div class="payment-card-icon card-color-paypal">
+              <i class="fa-brands fa-paypal"></i>
+            </div>
+            <div class="payment-card-details">
+              <div class="payment-label">PayPal</div>
+              <div class="payment-value-container">
+                <span class="payment-value">tomopencart@gmail.com</span>
+                <button class="btn-copy-payment" data-value="tomopencart@gmail.com" title="Скопировать"><i class="fa fa-clone"></i></button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="donate-copy-hint">
+          Нажмите на кнопку копирования рядом с реквизитами для сохранения в буфер обмена.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="donateCloseBtn">Закрыть</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast">
+    <span class="toast__text" id="toastText"></span>
+  </div>
+
+  <div data-include="components/footer.html"></div>
+
+  <script src="js/main.js"></script>
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="legal-pages-constructor/js/storage.js?v=3.0.4.3"></script>
+  <script src="legal-pages-constructor/js/documents.js?v=3.0.4.3"></script>
+  <script src="legal-pages-constructor/js/ui.js?v=3.0.4.3"></script>
+  <script src="legal-pages-constructor/js/editor.js?v=3.0.4.3"></script>
+  <script src="legal-pages-constructor/js/app.js?v=3.0.4.3"></script>
+</body>
+</html>

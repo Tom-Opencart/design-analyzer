@@ -1,0 +1,15 @@
+# robots.txt for opencartforum.com.ru
+# Generated: 2025-04-05
+# Сайт: https://opencartforum.com.ru/
+
+User-agent: *
+Allow: /
+Allow: /checker.html
+Allow: /info.html
+Allow: /warning.html
+Allow: /opencart_club.html
+Allow: /liveopencart_news.html
+Allow: /opencart-russia.html
+
+
+Sitemap: https://opencartforum.com.ru/sitemap.xml

@@ -1,0 +1,14 @@
+[
+  {
+    "id": "tcl-televizory-obzor",
+    "name": "Обзор телевизоров TCL",
+    "description": "Готовый макет обзора телевизоров с таблицей характеристик, FAQ и сравнением линеек.",
+    "file": "templates/tcl-televizory-obzor.json"
+  },
+  {
+    "id": "constructor-apple-watch-obzor",
+    "name": "Обзор Apple Watch",
+    "description": "Стартовый обзор умных часов Apple Watch со списками, заголовками и таблицами.",
+    "file": "templates/constructor-apple-watch-obzor.json"
+  }
+]

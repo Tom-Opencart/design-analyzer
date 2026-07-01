@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSL для OpenCart: Полное руководство v2.0</title>
+    <meta name="description" content="Пошаговое руководство по переходу на HTTPS для OpenCart.PRO и OpenCart.CMS всех версий.">
+    <meta name="keywords" content="SSL, HTTPS, OpenCart, настройка, редиректы, .htaccess, сертификат">
+    <meta property="og:title" content="SSL для OpenCart: Полное руководство v2.0">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://opencartforum.com.ru/info.html">
+    <meta property="og:description" content="Пошаговое руководство по переходу на HTTPS для OpenCart.PRO и OpenCart.CMS всех версий.">
+    <meta property="og:site_name" content="Opencart Клуб">
+    <meta property="og:locale" content="ru_RU">
+    <link rel="canonical" href="https://opencartforum.com.ru/info.html" />
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "headline": "SSL для OpenCart: Полное руководство v2.0",
+        "url": "https://opencartforum.com.ru/info.html",
+        "description": "Пошаговое руководство по переходу на HTTPS для OpenCart.PRO и OpenCart.CMS всех версий.",
+        "author": { "@type": "Organization", "name": "Opencart Клуб" },
+        "publisher": { "@type": "Organization", "name": "Opencart Клуб" }
+    }
+    </script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/style.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-mono/style.css">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <style>
+        /* Force footer appearance */
+        .site-footer { padding: 48px 0; border-top: 1px solid var(--tm-line-muted); background: var(--tm-surface); color: var(--tm-text-secondary); font-family: var(--tm-font-sans); }
+        .site-footer .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 42px; }
+        .site-footer .footer-grid strong { display: block; margin-bottom: 12px; font-size: 16px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--tm-text); }
+        .site-footer .footer-grid p { color: var(--tm-text-secondary); font-size: 14px; line-height: 1.6; }
+        .site-footer .footer-grid span { display: block; margin-bottom: 12px; font-family: var(--tm-font-mono); font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--tm-muted); }
+        .site-footer .footer-grid a { display: block; padding: 4px 0; font-size: 14px; color: var(--tm-text-secondary); text-decoration: none; }
+        .site-footer .footer-grid a:hover { color: var(--tm-text); }
+        .site-footer .footer-bottom { display: flex; align-items: center; justify-content: space-between; margin-top: 42px; padding-top: 24px; border-top: 1px solid var(--tm-line-muted); }
+        .site-footer .footer-bottom p { font-size: 13px; color: var(--tm-muted); margin: 0; }
+        .site-footer .footer-bottom a { display: inline-flex; align-items: center; gap: 6px; font-family: var(--tm-font-mono); font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--tm-muted); text-decoration: none; }
+        .site-footer .footer-bottom a:hover { color: var(--tm-text); }
+        @media (max-width: 980px) { .site-footer .footer-grid { grid-template-columns: 1fr 1fr; } }
+        @media (max-width: 560px) { .site-footer .footer-grid { grid-template-columns: 1fr; } .site-footer .footer-bottom { flex-direction: column; gap: 12px; text-align: center; } }
+    </style>
+</head>
+
+<body>
+    <div data-include="components/header.html"></div>
+
+    <section class="page-header">
+        <div class="container">
+            <span class="eyebrow">Руководство</span>
+            <h1>SSL для <span class="title-highlight">OpenCart</span></h1>
+            <p>Полное руководство по переходу на HTTPS для OpenCart.PRO и OpenCart.CMS всех версий.</p>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="container">
+            <div class="article-content">
+
+                <!-- UPDATE -->
+                <div class="alert-box alert-box--warning">
+                    <div><strong>UPD 07.03.2018:</strong> Яндекс заменил директиву HOST на 301-й редирект. <a href="https://yandex.ru/blog/webmaster/301-redirekt-zamenit-direktivu-host-pri-vybore-glavnogo-zerkala" target="_blank">Подробнее</a></div>
+                </div>
+
+                <!-- STEP 0 -->
+                <div class="step-card">
+                    <div class="step-header">
+                        <div class="step-number">0</div>
+                        <div>
+                            <h2>Резервное копирование</h2>
+                            <p>Меры предосторожности перед началом</p>
+                        </div>
+                    </div>
+                    <div class="step-body">
+                        <div class="alert-box alert-box--danger">
+                            <div><strong>Важно!</strong> Перед началом любых изменений создайте резервную копию файлов и базы данных сайта.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 1 -->
+                <div class="step-card">
+                    <div class="step-header">
+                        <div class="step-number">1</div>
+                        <div>
+                            <h2>Получение SSL-сертификата</h2>
+                            <p>Выбор и получение сертификата</p>
+                        </div>
+                    </div>
+                    <div class="step-body">
+                        <p>Для перехода на HTTPS необходим SSL-сертификат. Рекомендуемые провайдеры:</p>
+                        <div class="spoiler" data-spoiler>
+                            <button class="spoiler-toggle">Список провайдеров</button>
+                            <div class="spoiler-content">
+                                <ul>
+                                    <li><a href="https://www.comodo.com/" target="_blank">Comodo</a> — бесплатный сертификат на 90 дней, с продлением</li>
+                                    <li><a href="https://www.digicert.com/" target="_blank">DigiCert</a></li>
+                                    <li><a href="https://www.entrust.com/ssl-certificates/" target="_blank">Entrust</a></li>
+                                    <li><a href="https://www.geotrust.com/" target="_blank">GeoTrust</a></li>
+                                    <li><a href="https://www.globalsign.com/ru-ru/" target="_blank">GlobalSign</a></li>
+                                    <li><a href="https://letsencrypt.org/" target="_blank">Let's Encrypt</a> — <strong>БЕСПЛАТЕН</strong> (доступен в панели некоторых хостингов)</li>
+                                    <li><a href="https://www.swisssign.com/en/ssl-certificates" target="_blank">SwissSign</a></li>
+                                    <li><a href="http://www.symantec.com/ssl-sem-page/" target="_blank">Symantec</a></li>
+                                    <li><a href="https://www.ssl.com/" target="_blank">SSL.com</a></li>
+                                    <li><a href="https://www.thawte.com/" target="_blank">Thawte</a></li>
+                                    <li><a href="https://ssl.trustwave.com/buy-ssl-certificate" target="_blank">Trustwave</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="alert-box alert-box--info">
+                            <div><strong>Рекомендация:</strong> Let's Encrypt предоставляет бесплатные Wildcard-сертификаты для основного домена (domain.tld) и поддоменов (*.domain.tld).</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 2 -->
+                <div class="step-card">
+                    <div class="step-header">
+                        <div class="step-number">2</div>
+                        <div>
+                            <h2>Установка сертификата</h2>
+                            <p>Активация SSL на сервере</p>
+                        </div>
+                    </div>
+                    <div class="step-body">
+                        <ul>
+                            <li>Установите сертификат на сервер согласно документации (Apache, Nginx).</li>
+                            <li>Активируйте сертификат через панель управления хостинга.</li>
+                            <li>Обратитесь в техподдержку хостинга для установки.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- STEP 3 -->
+                <div class="step-card">
+                    <div class="step-header">
+                        <div class="step-number">3</div>
+                        <div>
+                            <h2>Настройка OpenCart</h2>
+                            <p>Конфигурация CMS для HTTPS</p>
+                        </div>
+                    </div>
+                    <div class="step-body">
+                        <div class="alert-box alert-box--warning">
+                            <div><strong>Внимание:</strong> Замените "site.ru" на ваш домен.</div>
+                        </div>
+                        <h3>3.1 Настройка config.php</h3>
+                        <div class="tm-code-window">
+                            <div class="tm-code-header">
+                                <span class="tm-code-dots"><span></span><span></span><span></span></span>
+                                <span class="tm-code-title">config.php (корневой каталог)</span>
+                                <button class="tm-code-copy" data-copy>Копировать</button>
+                            </div>
+                            <div class="tm-code-body"><pre><code>define('HTTP_SERVER', 'http://site.ru/');
+define('HTTPS_SERVER', 'http://site.ru/');
+
+// Стало:
+define('HTTP_SERVER', 'https://site.ru/');
+define('HTTPS_SERVER', 'https://site.ru/');</code></pre></div>
+                        </div>
+                        <div class="tm-code-window">
+                            <div class="tm-code-header">
+                                <span class="tm-code-dots"><span></span><span></span><span></span></span>
+                                <span class="tm-code-title">admin/config.php</span>
+                                <button class="tm-code-copy" data-copy>Копировать</button>
+                            </div>
+                            <div class="tm-code-body"><pre><code>define('HTTP_SERVER', 'http://site.ru/admin/');
+define('HTTP_CATALOG', 'http://site.ru/');
+define('HTTPS_SERVER', 'http://site.ru/admin/');
+define('HTTPS_CATALOG', 'http://site.ru/');
+
+// Стало:
+define('HTTP_SERVER', 'https://site.ru/admin/');
+define('HTTP_CATALOG', 'https://site.ru/');
+define('HTTPS_SERVER', 'https://site.ru/admin/');
+define('HTTPS_CATALOG', 'https://site.ru/');</code></pre></div>
+                        </div>
+                        <h3>3.2 Настройка в админ-панели</h3>
+                        <p>В админ-панели: <strong>Система → Настройки → Редактировать → Вкладка Сервер → Использовать SSL</strong> — выберите <strong>Да</strong>.</p>
+                        <h3>3.3 Обновление robots.txt</h3>
+                        <ul>
+                            <li>Если sitemap не фид, добавьте: <code>Sitemap: https://mysite.com/sitemap.xml</code></li>
+                            <li>Если sitemap — фид, предоставьте новый HTTPS фид.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- STEP 4 -->
+                <div class="step-card">
+                    <div class="step-header">
+                        <div class="step-number">4</div>
+                        <div>
+                            <h2>Настройка 301 редиректов</h2>
+                            <p>Перенаправление с HTTP на HTTPS</p>
+                        </div>
+                    </div>
+                    <div class="step-body">
+                        <div class="alert-box alert-box--info">
+                            <div><strong>Важно:</strong> Редиректы добавляйте в <code>.htaccess</code> после <code>RewriteBase /</code> или <code>RewriteEngine On</code>. Проверьте, что <code>mod_rewrite</code> включен.</div>
+                        </div>
+                        <div class="alert-box alert-box--info">
+                            <div><strong>Важно:</strong> Убедитесь, что редирект с/без www уже настроен.</div>
+                        </div>
+
+                        <div class="accordion">
+                            <!-- Yoda -->
+                            <div class="accordion-item" data-accordion>
+                                <button class="accordion-trigger">
+                                    <span>Универсальный редирект от @Yoda <span class="badge-host badge-host--accent">Универсальный</span></span>
+                                    <svg class="icon-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                                </button>
+                                <div class="accordion-panel">
+                                    <div class="tm-code-window">
+                                        <div class="tm-code-header">
+                                            <span class="tm-code-dots"><span></span><span></span><span></span></span>
+                                            <span class="tm-code-title">.htaccess</span>
+                                            <button class="tm-code-copy" data-copy>Копировать</button>
+                                        </div>
+                                        <div class="tm-code-body"><pre><code>RewriteCond %{HTTPS} off
+RewriteCond %{HTTP_HOST} ^(www\.)?(osnovnoy_domen\.ru)
+RewriteRule ^ https://%2%{REQUEST_URI} [R=301,L]</code></pre></div>
+                                    </div>
+                                    <p><strong>Замените</strong> <code>osnovnoy_domen.ru</code> на ваш домен.</p>
+                                </div>
+                            </div>
+                            <!-- savage4pro -->
+                            <div class="accordion-item" data-accordion>
+                                <button class="accordion-trigger">
+                                    <span>Универсальный редирект от @savage4pro <span class="badge-host badge-host--accent">Универсальный</span></span>
+                                    <svg class="icon-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                                </button>
+                                <div class="accordion-panel">
+                                    <p><strong>Вариант 1:</strong> С www на без www</p>
+                                    <div class="tm-code-window">
+                                        <div class="tm-code-header">
+                                            <span class="tm-code-dots"><span></span><span></span><span></span></span>
+                                            <span class="tm-code-title">.htaccess — без www</span>
+                                            <button class="tm-code-copy" data-copy>Копировать</button>
+                                        </div>
+                                        <div class="tm-code-body"><pre><code>RewriteCond %{HTTP_HOST} ^www\.(.*)$ [NC]
+RewriteRule ^ https://%1%{REQUEST_URI} [R=301,L]
+RewriteCond %{HTTP:X-Forwarded-Proto} =http [OR]
+RewriteCond %{HTTP:X-Forwarded-Proto} =""
+RewriteCond %{HTTP:X-HTTPS} !1 [OR]
+RewriteCond %{HTTPS} !=on
+RewriteCond %{REQUEST_URI} !robots\.txt
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]</code></pre>
+                                    </div>
+                                    <p><strong>Вариант 2:</strong> Без www на с www</p>
+                                    <div class="tm-code-window">
+                                        <div class="tm-code-header">
+                                            <span class="tm-code-dots"><span></span><span></span><span></span></span>
+                                            <span class="tm-code-title">.htaccess — с www</span>
+                                            <button class="tm-code-copy" data-copy>Копировать</button>
+                                        </div>
+                                        <div class="tm-code-body"><pre><code>RewriteCond %{HTTP_HOST} !^www\.(.*)$ [NC]
+RewriteRule ^ https://www.%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+RewriteCond %{HTTP:X-Forwarded-Proto} =http [OR]
+RewriteCond %{HTTP:X-Forwarded-Proto} =""
+RewriteCond %{HTTP:X-HTTPS} !1 [OR]
+RewriteCond %{HTTPS} !=on
+RewriteCond %{REQUEST_URI} !robots\.txt
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]</code></pre>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Timeweb -->
+                            <div class="accordion-item" data-accordion>
+                                <button class="accordion-trigger">
+                                    <span>Timeweb.ru <span class="badge-host">Timeweb</span></span>
+                                    <svg class="icon-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                                </button>
+                                <div class="accordion-panel">
+                                    <div class="tm-code-window">
+                                        <div class="tm-code-header">
+                                            <span class="tm-code-dots"><span></span><span></span><span></span></span>
+                                            <span class="tm-code-title">.htaccess</span>
+                                            <button class="tm-code-copy" data-copy>Копировать</button>
+                                        </div>
+                                        <div class="tm-code-body"><pre><code>RewriteEngine On
+RewriteBase /
+RewriteCond %{HTTP:X-HTTPS} !1
+RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [R=301,L]</code></pre>
+                                    </div>
+                                    <div class="alert-box alert-box--info">
+                                        <div><strong>Рекомендация:</strong> Включите редирект HTTP → HTTPS в панели управления Timeweb.</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Ukraine -->
+                            <div class="accordion-item" data-accordion>
+                                <button class="accordion-trigger">
+                                    <span>Ukraine.com.ua <span class="badge-host">ukraine.com.ua</span></span>
+                                    <svg class="icon-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                                </button>
+                                <div class="accordion-panel">
+                                    <div class="tm-code-window">
+                                        <div class="tm-code-header">
+                                            <span class="tm-code-dots"><span></span><span></span><span></span></span>
+                                            <span class="tm-code-title">.htaccess</span>
+                                            <button class="tm-code-copy" data-copy>Копировать</button>
+                                        </div>
+                                        <div class="tm-code-body"><pre><code>RewriteCond %{HTTP:SSL} !=1 [NC]
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]</code></pre>
+                                    </div>
+                                    <div class="alert-box alert-box--info">
+                                        <div>При проблемах обратитесь в поддержку хостинга из-за сложной конфигурации.</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Masterhost -->
+                            <div class="accordion-item" data-accordion>
+                                <button class="accordion-trigger">
+                                    <span>Masterhost.ru <span class="badge-host">masterhost.ru</span></span>
+                                    <svg class="icon-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                                </button>
+                                <div class="accordion-panel">
+                                    <div class="tm-code-window">
+                                        <div class="tm-code-header">
+                                            <span class="tm-code-dots"><span></span><span></span><span></span></span>
+                                            <span class="tm-code-title">.htaccess</span>
+                                            <button class="tm-code-copy" data-copy>Копировать</button>
+                                        </div>
+                                        <div class="tm-code-body"><pre><code>RewriteCond %{HTTP_HOST} ^www\.(.*)$ [NC]
+RewriteRule ^ https://%1%{REQUEST_URI} [R=301,L]
+RewriteCond %{HTTP:PORT} !^443$
+RewriteCond %{REQUEST_URI} !robots\.txt
+RewriteRule ^(.*)$ https://%{SERVER_NAME}%{REQUEST_URI} [R=301,L]</code></pre>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Webhost1 -->
+                            <div class="accordion-item" data-accordion>
+                                <button class="accordion-trigger">
+                                    <span>Webhost1.ru <span class="badge-host">webhost1.ru</span></span>
+                                    <svg class="icon-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                                </button>
+                                <div class="accordion-panel">
+                                    <div class="tm-code-window">
+                                        <div class="tm-code-header">
+                                            <span class="tm-code-dots"><span></span><span></span><span></span></span>
+                                            <span class="tm-code-title">.htaccess</span>
+                                            <button class="tm-code-copy" data-copy>Копировать</button>
+                                        </div>
+                                        <div class="tm-code-body"><pre><code>RewriteCond %{ENV:HTTPS} !on
+RewriteRule (.*) https://%{HTTP_HOST}%{REQUEST_URI} [NC,R=301,L]</code></pre>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Nginx + Apache -->
+                            <div class="accordion-item" data-accordion>
+                                <button class="accordion-trigger">
+                                    <span>Nginx + Apache <span class="badge-host badge-host--accent">Универсальный</span></span>
+                                    <svg class="icon-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                                </button>
+                                <div class="accordion-panel">
+                                    <div class="tm-code-window">
+                                        <div class="tm-code-header">
+                                            <span class="tm-code-dots"><span></span><span></span><span></span></span>
+                                            <span class="tm-code-title">.htaccess</span>
+                                            <button class="tm-code-copy" data-copy>Копировать</button>
+                                        </div>
+                                        <div class="tm-code-body"><pre><code>SetEnvIf X-SSL-Emu on HTTPS
+RewriteCond %{HTTP:X-SSL-Emu} !on
+RewriteRule .* https://%{SERVER_NAME}%{REQUEST_URI} [R=301,L]
+RewriteCond %{HTTP_HOST} !^www\.(.*)$ [NC]
+RewriteRule ^ https://www.%{HTTP_HOST}%{REQUEST_URI} [R=301,L]</code></pre>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Jino -->
+                            <div class="accordion-item" data-accordion>
+                                <button class="accordion-trigger">
+                                    <span>Jino.ru <span class="badge-host">jino.ru</span></span>
+                                    <svg class="icon-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                                </button>
+                                <div class="accordion-panel">
+                                    <div class="tm-code-window">
+                                        <div class="tm-code-header">
+                                            <span class="tm-code-dots"><span></span><span></span><span></span></span>
+                                            <span class="tm-code-title">.htaccess</span>
+                                            <button class="tm-code-copy" data-copy>Копировать</button>
+                                        </div>
+                                        <div class="tm-code-body"><pre><code>RewriteCond %{HTTP_HOST} ^www\.(.*)$ [NC]
+RewriteRule ^ https://%1%{REQUEST_URI} [R=301,L]
+RewriteCond %{HTTP:X-Forwarded-Protocol} !=https
+RewriteRule .* https://%{SERVER_NAME}%{REQUEST_URI} [R=301,L]</code></pre>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Hostpro -->
+                            <div class="accordion-item" data-accordion>
+                                <button class="accordion-trigger">
+                                    <span>Hostpro.ua <span class="badge-host">hostpro.ua</span></span>
+                                    <svg class="icon-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                                </button>
+                                <div class="accordion-panel">
+                                    <div class="tm-code-window">
+                                        <div class="tm-code-header">
+                                            <span class="tm-code-dots"><span></span><span></span><span></span></span>
+                                            <span class="tm-code-title">.htaccess</span>
+                                            <button class="tm-code-copy" data-copy>Копировать</button>
+                                        </div>
+                                        <div class="tm-code-body"><pre><code>RewriteCond %{HTTPS} off
+RewriteCond %{HTTP:X-Forwarded-Proto} !https
+RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]</code></pre>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Beget -->
+                            <div class="accordion-item" data-accordion>
+                                <button class="accordion-trigger">
+                                    <span>Beget.ru <span class="badge-host">beget.ru</span></span>
+                                    <svg class="icon-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                                </button>
+                                <div class="accordion-panel">
+                                    <div class="tm-code-window">
+                                        <div class="tm-code-header">
+                                            <span class="tm-code-dots"><span></span><span></span><span></span></span>
+                                            <span class="tm-code-title">.htaccess</span>
+                                            <button class="tm-code-copy" data-copy>Копировать</button>
+                                        </div>
+                                        <div class="tm-code-body"><pre><code>RewriteCond %{HTTP:X-Forwarded-Proto} !=https
+RewriteRule .* https://%{SERVER_NAME}%{REQUEST_URI} [R=301,L]</code></pre>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 5 -->
+                <div class="step-card">
+                    <div class="step-header">
+                        <div class="step-number">5</div>
+                        <div>
+                            <h2>Очистка кэша</h2>
+                            <p>Обновление временных файлов</p>
+                        </div>
+                    </div>
+                    <div class="step-body">
+                        <ul>
+                            <li>Очистите кэш OpenCart: удалите содержимое <code>system/storage/cache/</code>.</li>
+                            <li>Очистите кэш модификаторов: удалите содержимое <code>system/storage/modification/</code>.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- STEP 6 -->
+                <div class="step-card">
+                    <div class="step-header">
+                        <div class="step-number">6</div>
+                        <div>
+                            <h2>Проверка работы</h2>
+                            <p>Тестирование редиректов и функциональности</p>
+                        </div>
+                    </div>
+                    <div class="step-body">
+                        <h3>6.1 Если редирект с www на без www</h3>
+                        <ul>
+                            <li>HTTP с WWW → HTTPS без WWW</li>
+                            <li>HTTP без WWW → HTTPS без WWW</li>
+                            <li>HTTPS с WWW → HTTPS без WWW</li>
+                        </ul>
+                        <h3>6.2 Если редирект без www на с www</h3>
+                        <ul>
+                            <li>HTTP с WWW → HTTPS с WWW</li>
+                            <li>HTTP без WWW → HTTPS с WWW</li>
+                            <li>HTTPS без WWW → HTTPS с WWW</li>
+                        </ul>
+                        <h3>6.3 Проверка статических файлов</h3>
+                        <p>Проверьте, как сервер отдает статические файлы (например, фото товаров) по HTTPS.</p>
+                        <h3>6.4 Проверка редиректа</h3>
+                        <p>Убедитесь, что используется 301-й редирект (не 302). Проверьте через <a href="https://www.webpagetest.org" target="_blank">WebPageTest</a>, <a href="https://www.screamingfrog.co.uk/seo-spider/" target="_blank">Screaming Frog</a> или в браузере (F12).</p>
+                        <h3>6.5 Проверка ссылок</h3>
+                        <p>Проверьте сайт на наличие HTTP-ссылок в статьях или описаниях товаров. Замените на HTTPS или сделайте относительными.</p>
+                    </div>
+                </div>
+
+                <!-- STEP 7 -->
+                <div class="step-card">
+                    <div class="step-header">
+                        <div class="step-number">7</div>
+                        <div>
+                            <h2>Добавление в вебмастеры</h2>
+                            <p>Регистрация HTTPS-версии сайта</p>
+                        </div>
+                    </div>
+                    <div class="step-body">
+                        <div class="spoiler" data-spoiler>
+                            <button class="spoiler-toggle">Список сервисов</button>
+                            <div class="spoiler-content">
+                                <ul>
+                                    <li><a href="https://www.google.com/webmasters/" target="_blank">Google Search Console</a></li>
+                                    <li><a href="https://webmaster.yandex.ru/" target="_blank">Яндекс.Вебмастер</a></li>
+                                    <li><a href="http://www.bing.com/toolbox/webmaster/" target="_blank">Bing Webmaster</a></li>
+                                    <li><a href="https://webmaster.mail.ru/" target="_blank">Mail.ru</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 8 -->
+                <div class="step-card">
+                    <div class="step-header">
+                        <div class="step-number">8</div>
+                        <div>
+                            <h2>Решение проблем</h2>
+                            <p>Устранение возможных ошибок</p>
+                        </div>
+                    </div>
+                    <div class="step-body">
+                        <ul>
+                            <li><strong>404 ошибки:</strong> Проверьте настройки сервера и DocumentRoot.</li>
+                            <li><strong>HTTP изображения:</strong> Проверьте настройки CDN и ссылки в базе данных.</li>
+                            <li><strong>Mixed Content:</strong> Все внешние ресурсы (скрипты, стили, шрифты, iframe) должны быть по HTTPS.</li>
+                            <li><strong>Ограничения хостинга:</strong> Для виртуального хостинга (Beget, Timeweb) возможны ограничения. Рассмотрите VPS.</li>
+                        </ul>
+                        <div class="alert-box alert-box--danger">
+                            <div><strong>Важно:</strong> Все внешние ресурсы должны загружаться по HTTPS, иначе возникнут ошибки Mixed Content.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 9 -->
+                <div class="step-card">
+                    <div class="step-header">
+                        <div class="step-number">9</div>
+                        <div>
+                            <h2>Дополнительная информация</h2>
+                            <p>Ресурсы от поисковых систем</p>
+                        </div>
+                    </div>
+                    <div class="step-body">
+                        <ul>
+                            <li>Яндекс: <a href="https://yandex.ru/support/webmaster-troubleshooting/mirrors/change-protocol.xml" target="_blank">1</a>, <a href="https://yandex.ru/blog/platon/pereezd-sayta-posle-otkaza-ot-direktivy-host" target="_blank">2</a>, <a href="https://yandex.ru/blog/webmaster/301-redirekt-zamenit-direktivu-host-pri-vybore-glavnogo-zerkala" target="_blank">3</a></li>
+                            <li>Google: <a href="https://support.google.com/webmasters/answer/6073543?hl=ru" target="_blank">1</a>, <a href="https://plus.google.com/+JohnMueller/posts/PY1xCWbeDVC" target="_blank">2</a></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- TOOLS -->
+                <h2 style="margin-top:56px;">Полезные инструменты</h2>
+                <p>Сервисы для проверки и мониторинга SSL.</p>
+                <div class="tools-grid">
+                    <div class="tool-card-sm">
+                        <div class="tool-card-sm__icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+                        <h3>SSL Labs</h3>
+                        <p>Проверка SSL-сертификата и конфигурации</p>
+                        <a href="https://www.ssllabs.com/ssltest/" target="_blank">Проверить SSL →</a>
+                    </div>
+                    <div class="tool-card-sm">
+                        <div class="tool-card-sm__icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+                        <h3>WebPageTest</h3>
+                        <p>Проверка редиректов и производительности</p>
+                        <a href="https://www.webpagetest.org/" target="_blank">Тестировать →</a>
+                    </div>
+                    <div class="tool-card-sm">
+                        <div class="tool-card-sm__icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+                        <h3>SSL Test</h3>
+                        <p>Проверка SSL-сертификата</p>
+                        <a href="https://www.ssllabs.com/ssltest/" target="_blank">Проверить SSL →</a>
+                    </div>
+                    <div class="tool-card-sm">
+                        <div class="tool-card-sm__icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg></div>
+                        <h3>HTTP/2 Test</h3>
+                        <p>Проверка поддержки HTTP/2 и ALPN</p>
+                        <a href="https://tools.keycdn.com/http2-test" target="_blank">Проверить HTTP/2 →</a>
+                    </div>
+                    <div class="tool-card-sm">
+                        <div class="tool-card-sm__icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg></div>
+                        <h3>Host Tracker</h3>
+                        <p>Мониторинг доступности сайта</p>
+                        <a href="https://www.host-tracker.com/" target="_blank">Мониторить →</a>
+                    </div>
+                    <div class="tool-card-sm">
+                        <div class="tool-card-sm__icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+                        <h3>SSLShopper</h3>
+                        <p>Проверка установленного сертификата</p>
+                        <a href="https://www.sslshopper.com/ssl-checker.html" target="_blank">Проверить сертификат →</a>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <div id="toast" class="toast-msg"></div>
+
+    <div data-include="components/footer.html"></div>
+    <script src="js/main.js"></script>
+</body>
+
+</html>

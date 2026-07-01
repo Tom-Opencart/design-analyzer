@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Генератор модулей OpenCart 3 | Opencart Клуб</title>
+    <meta name="description"
+        content="Бесплатный онлайн генератор каркаса модулей для OpenCart 3, OcStore 3 и LiveStore 3. Создайте структуру модуля за одну минуту.">
+    <meta name="keywords"
+        content="OpenCart, генератор модулей, разработка, OpenCart 3, OcStore, модуль, каркас модуля, расширение">
+    <meta property="og:title" content="Генератор модулей OpenCart 3 | Opencart Клуб">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://opencartforum.com.ru/module_generator.html">
+    <meta property="og:description"
+        content="Бесплатный онлайн генератор каркаса модулей для OpenCart 3, OcStore 3 и LiveStore 3.">
+    <meta property="og:site_name" content="Opencart Клуб">
+    <meta property="og:locale" content="ru_RU">
+    <link rel="canonical" href="https://opencartforum.com.ru/module_generator.html" />
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/style.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-mono/style.css">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+
+    <style>
+        /* Legacy variable aliases → tom-modern tokens */
+        :root {
+            --primary-color: var(--tm-text);
+            --secondary-color: var(--tm-muted);
+            --text-color: var(--tm-text);
+            --light-bg: var(--tm-surface-alt);
+            --white: var(--tm-surface);
+            --border-color: var(--tm-line);
+            --hover-color: var(--tm-text);
+            --card-shadow: var(--tm-shadow-soft);
+        }
+        /* Bootstrap utility replacements */
+        .d-grid { display: grid; }
+        .d-flex { display: flex; }
+        .d-block { display: block; }
+        .d-none { display: none; }
+        .gap-2 { gap: 8px; }
+        .gap-3 { gap: 12px; }
+        .align-items-center { align-items: center; }
+        .align-items-start { align-items: flex-start; }
+        .justify-content-center { justify-content: center; }
+        .justify-content-between { justify-content: space-between; }
+        .flex-wrap { flex-wrap: wrap; }
+        .flex-column { flex-direction: column; }
+        .text-start { text-align: left; }
+        .text-center { text-align: center; }
+        .text-end { text-align: right; }
+        .text-muted { color: var(--tm-muted); }
+        .text-secondary { color: var(--tm-text-secondary); }
+        .text-primary-custom { color: var(--tm-text); }
+        .text-uppercase { text-transform: uppercase; }
+        .text-decoration-none { text-decoration: none; }
+        .fw-bold { font-weight: 700; }
+        .fw-normal { font-weight: 400; }
+        .fs-5 { font-size: 1.25rem; }
+        .fs-6 { font-size: 1rem; }
+        .p-0 { padding: 0; }
+        .p-1 { padding: 4px; }
+        .p-2 { padding: 8px; }
+        .p-3 { padding: 12px; }
+        .p-4 { padding: 16px; }
+        .px-3 { padding-left: 12px; padding-right: 12px; }
+        .py-2 { padding-top: 8px; padding-bottom: 8px; }
+        .m-0 { margin: 0; }
+        .mb-0 { margin-bottom: 0; }
+        .mb-1 { margin-bottom: 4px; }
+        .mb-2 { margin-bottom: 8px; }
+        .mb-3 { margin-bottom: 12px; }
+        .mb-4 { margin-bottom: 16px; }
+        .mb-5 { margin-bottom: 32px; }
+        .mt-1 { margin-top: 4px; }
+        .mt-2 { margin-top: 8px; }
+        .mt-3 { margin-top: 12px; }
+        .mt-4 { margin-top: 16px; }
+        .me-1 { margin-right: 4px; }
+        .me-2 { margin-right: 8px; }
+        .me-3 { margin-right: 12px; }
+        .ms-1 { margin-left: 4px; }
+        .ms-2 { margin-left: 8px; }
+        .ms-auto { margin-left: auto; }
+        .my-4 { margin-top: 16px; margin-bottom: 16px; }
+        .w-100 { width: 100%; }
+        .h-100 { height: 100%; }
+        .overflow-auto { overflow: auto; }
+        .position-relative { position: relative; }
+        .opacity-75 { opacity: 0.75; }
+        .opacity-25 { opacity: 0.25; }
+        .list-unstyled { list-style: none; padding: 0; margin: 0; }
+        .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+        .rounded { border-radius: 4px; }
+        .shadow-sm { box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+        hr { border: none; border-top: 1px solid var(--tm-line-muted); margin: 16px 0; }
+        .row { display: flex; flex-wrap: wrap; margin: 0 -8px; }
+        .row > [class*="col-"] { padding: 0 8px; }
+        .col-6 { width: 50%; }
+        .col-md-6 { width: 50%; }
+        .col-lg-4 { width: 100%; }
+        .col-lg-6 { width: 100%; }
+        .col-lg-8 { width: 100%; }
+        .col-lg-10 { width: 100%; }
+        .col-lg-12 { width: 100%; }
+        @media (min-width: 980px) {
+            .col-lg-4 { width: 33.333%; }
+            .col-lg-6 { width: 50%; }
+            .col-lg-8 { width: 66.666%; }
+            .col-lg-10 { width: 83.333%; }
+            .col-lg-12 { width: 100%; }
+        }
+        .container { width: min(100% - 40px, 1240px); margin: 0 auto; }
+        .container-fluid { width: 100%; }
+        .section-padding { padding: 96px 0; }
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+            padding: 10px 18px; border: 1px solid var(--tm-line); background: transparent;
+            color: var(--tm-text); font-size: 13px; font-weight: 600; cursor: pointer;
+            transition: background 0.15s, border-color 0.15s;
+        }
+        .btn-sm { padding: 6px 12px; font-size: 12px; }
+        .btn-primary {
+            background: var(--tm-text); border-color: var(--tm-text); color: #fff;
+        }
+        .btn-primary:hover { background: var(--tm-accent); border-color: var(--tm-accent); }
+        .btn-secondary {
+            background: transparent; border-color: var(--tm-line); color: var(--tm-text);
+        }
+        .btn-secondary:hover { background: var(--tm-surface-alt); }
+        .btn-outline-primary {
+            background: transparent; border-color: var(--tm-text); color: var(--tm-text);
+        }
+        .btn-outline-primary:hover { background: var(--tm-text); color: #fff; }
+        .btn-outline-secondary {
+            background: transparent; border-color: var(--tm-line); color: var(--tm-muted);
+        }
+        .btn-outline-secondary:hover { background: var(--tm-surface-alt); color: var(--tm-text); }
+        .btn-outline-danger {
+            background: transparent; border-color: #ef4444; color: #ef4444;
+        }
+        .btn-outline-danger:hover { background: #fef2f2; }
+        .btn-ghost {
+            background: transparent; border: none; color: var(--tm-muted); padding: 6px 10px;
+        }
+        .btn-ghost:hover { color: var(--tm-text); background: var(--tm-surface-alt); }
+        .form-control {
+            width: 100%; padding: 10px 14px; border: 1px solid var(--tm-line);
+            background: var(--tm-surface); font-size: 14px; color: var(--tm-text);
+            transition: border-color 0.15s;
+        }
+        .form-control:focus { outline: none; border-color: var(--tm-accent); }
+        .form-label { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: var(--tm-text); }
+        .form-select {
+            width: 100%; padding: 10px 14px; border: 1px solid var(--tm-line);
+            background: var(--tm-surface); font-size: 14px; color: var(--tm-text);
+        }
+        .badge { display: inline-block; padding: 2px 8px; font-size: 11px; font-weight: 700; }
+        .bg-primary { background: var(--tm-accent); color: #fff; }
+        .bg-secondary { background: var(--tm-muted); color: #fff; }
+        .bg-success { background: #22c55e; color: #fff; }
+        .bg-danger { background: #ef4444; color: #fff; }
+        .bg-warning { background: #f59e0b; color: #000; }
+        .bg-info { background: #3b82f6; color: #fff; }
+        .text-success { color: #22c55e; }
+        .text-danger { color: #ef4444; }
+        .text-warning { color: #f59e0b; }
+        .text-info { color: #3b82f6; }
+        .alert {
+            padding: 14px 18px; border: 1px solid; font-size: 14px; line-height: 1.5;
+        }
+        .alert-danger { background: #fef2f2; border-color: #ef4444; color: #991b1b; }
+        .alert-warning { background: #fffbeb; border-color: #f59e0b; color: #92400e; }
+        .alert-success { background: #f0fdf4; border-color: #22c55e; color: #166534; }
+        .alert-info { background: #eff6ff; border-color: #3b82f6; color: #1e40af; }
+        /* Force footer appearance over Bootstrap */
+        .site-footer { padding: 48px 0 !important; border-top: 1px solid var(--tm-line-muted) !important; background: var(--tm-surface) !important; color: var(--tm-text-secondary) !important; font-family: var(--tm-font-sans) !important; }
+        .site-footer .footer-grid { display: grid !important; grid-template-columns: 2fr 1fr 1fr !important; gap: 42px !important; }
+        .site-footer .footer-grid strong { display: block !important; margin-bottom: 12px !important; font-size: 16px !important; text-transform: uppercase !important; letter-spacing: 0.06em !important; color: var(--tm-text) !important; }
+        .site-footer .footer-grid p { color: var(--tm-text-secondary) !important; font-size: 14px !important; line-height: 1.6 !important; }
+        .site-footer .footer-grid span { display: block !important; margin-bottom: 12px !important; font-family: var(--tm-font-mono) !important; font-size: 11px !important; font-weight: 700 !important; letter-spacing: 0.12em !important; text-transform: uppercase !important; color: var(--tm-muted) !important; }
+        .site-footer .footer-grid a { display: block !important; padding: 4px 0 !important; font-size: 14px !important; color: var(--tm-text-secondary) !important; text-decoration: none !important; }
+        .site-footer .footer-grid a:hover { color: var(--tm-text) !important; }
+        .site-footer .footer-bottom { display: flex !important; align-items: center !important; justify-content: space-between !important; margin-top: 42px !important; padding-top: 24px !important; border-top: 1px solid var(--tm-line-muted) !important; }
+        .site-footer .footer-bottom p { font-size: 13px !important; color: var(--tm-muted) !important; margin: 0 !important; }
+        .site-footer .footer-bottom a { display: inline-flex !important; align-items: center !important; gap: 6px !important; font-family: var(--tm-font-mono) !important; font-size: 12px !important; font-weight: 700 !important; letter-spacing: 0.06em !important; text-transform: uppercase !important; color: var(--tm-muted) !important; text-decoration: none !important; }
+        .site-footer .footer-bottom a:hover { color: var(--tm-text) !important; }
+        @media (max-width: 980px) { .site-footer .footer-grid { grid-template-columns: 1fr 1fr !important; } }
+        @media (max-width: 560px) { .site-footer .footer-grid { grid-template-columns: 1fr !important; } .site-footer .footer-bottom { flex-direction: column !important; gap: 12px !important; text-align: center !important; } }
+
+        /* Generator-specific styles */
+        .generator-container {
+            background: var(--tm-surface);
+            border-radius: 0;
+            border: 1px solid var(--tm-line);
+            padding: 28px;
+            box-shadow: var(--tm-shadow-soft);
+            margin-bottom: 24px;
+        }
+
+        .mode-switch-wrapper {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 28px;
+        }
+
+        .mode-switch {
+            display: flex;
+            background: var(--tm-surface-alt);
+            border-radius: 0;
+            padding: 4px;
+            border: 1px solid var(--tm-line);
+        }
+
+        .mode-btn {
+            padding: 10px 24px;
+            border: none;
+            background: transparent;
+            color: var(--tm-muted);
+            font-family: var(--tm-font-mono);
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            border-radius: 0;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .mode-btn.active {
+            background: var(--tm-surface);
+            color: var(--tm-text);
+            box-shadow: var(--tm-shadow-soft);
+        }
+
+        .mode-btn.active.dev-mode {
+            color: var(--tm-accent);
+        }
+
+        .form-label-custom {
+            font-family: var(--tm-font-mono);
+            font-weight: 700;
+            font-size: 11px;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+            color: var(--tm-muted);
+        }
+
+        .form-control-custom {
+            border-radius: 0;
+            padding: 10px 14px;
+            border: 1px solid var(--tm-line);
+            background: var(--tm-surface);
+            font-size: 14px;
+            color: var(--tm-text);
+            transition: border-color 0.15s;
+        }
+
+        .form-control-custom:focus {
+            border-color: var(--tm-accent);
+            outline: none;
+            box-shadow: none;
+        }
+
+        .form-select-custom {
+            border-radius: 0;
+            padding: 10px 14px;
+            border: 1px solid var(--tm-line);
+            background: var(--tm-surface);
+            font-size: 14px;
+            color: var(--tm-text);
+        }
+
+        .card-settings {
+            background: var(--tm-surface);
+            border-radius: 0;
+            padding: 20px;
+            height: 100%;
+            border: 1px solid var(--tm-line);
+        }
+
+        .file-options-title {
+            font-weight: 700;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: -0.02em;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .option-group {
+            margin-bottom: 20px;
+        }
+
+        .option-group-label {
+            font-family: var(--tm-font-mono);
+            font-weight: 700;
+            font-size: 10px;
+            color: var(--tm-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .custom-checkbox-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.6rem;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .custom-checkbox-item input {
+            display: none;
+        }
+
+        .checkbox-box {
+            width: 18px;
+            height: 18px;
+            border: 1px solid var(--tm-line);
+            border-radius: 0;
+            margin-right: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s;
+            background: var(--tm-surface);
+            flex-shrink: 0;
+        }
+
+        .custom-checkbox-item input:checked+.checkbox-box {
+            background: var(--tm-text);
+            border-color: var(--tm-text);
+        }
+
+        .custom-checkbox-item input:checked+.checkbox-box::after {
+            content: "";
+            width: 6px;
+            height: 10px;
+            border: solid #fff;
+            border-width: 0 2px 2px 0;
+            transform: rotate(45deg);
+            margin-top: -2px;
+        }
+
+        .checkbox-label {
+            font-size: 14px;
+            color: var(--tm-text-secondary);
+        }
+
+        /* Tree / Code containers — tm-code-window style */
+        .tree-container {
+            background: var(--tm-code-bg);
+            color: var(--tm-code-text);
+            border-radius: 0;
+            padding: 24px;
+            font-family: var(--tm-font-mono);
+            font-size: 13px;
+            line-height: 1.72;
+            min-height: 300px;
+            border: 1px solid rgba(17, 21, 23, 0.12);
+            box-shadow: var(--tm-shadow-code);
+            overflow: auto;
+            position: relative;
+        }
+        .tree-container::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            background:
+                linear-gradient(120deg, rgba(255, 255, 255, 0.08), transparent 34%),
+                radial-gradient(circle at 80% 0%, rgba(92, 207, 230, 0.12), transparent 30%);
+        }
+        .tree-container pre {
+            position: relative;
+            z-index: 1;
+            margin: 0;
+            font-family: var(--tm-font-mono);
+            font-size: 13px;
+            line-height: 1.72;
+            color: var(--tm-code-text);
+            background: none;
+            border: none;
+            padding: 0;
+        }
+
+        .tree-item {
+            margin-left: 1.5rem;
+            position: relative;
+            padding: 2px 0;
+        }
+
+        .tree-item::before {
+            content: "";
+            position: absolute;
+            left: -1rem;
+            top: 0;
+            bottom: 0;
+            width: 1px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .tree-item:last-child::before {
+            height: 0.75rem;
+        }
+
+        .tree-item::after {
+            content: "";
+            position: absolute;
+            left: -1rem;
+            top: 0.75rem;
+            width: 0.75rem;
+            height: 1px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .tree-folder {
+            color: rgba(238, 242, 245, 0.6);
+            font-weight: 600;
+        }
+
+        .tree-file {
+            color: #5ccfe6;
+        }
+
+        .tree-zip {
+            color: #ffd866;
+            font-weight: 700;
+        }
+
+        .btn-generate {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 16px 28px;
+            font-size: 14px;
+            border-radius: 0;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            background: var(--tm-text);
+            border: 1px solid var(--tm-text);
+            color: #fff;
+            box-shadow: var(--tm-shadow-soft);
+            transition: transform 0.2s, box-shadow 0.2s, background 0.15s;
+            cursor: pointer;
+        }
+
+        .btn-generate:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: var(--tm-shadow-hard);
+            background: var(--tm-accent);
+            border-color: var(--tm-accent);
+        }
+
+        /* Dark Theme overrides */
+        body.dark-theme .generator-container {
+            background: #0f172a;
+            border-color: #334155;
+        }
+        body.dark-theme .card-settings {
+            background: #1e293b;
+            border-color: #334155;
+        }
+        body.dark-theme .tree-container {
+            background: #0f172a;
+            border-color: #334155;
+        }
+        body.dark-theme .form-control-custom,
+        body.dark-theme .form-select-custom {
+            background: #1e293b;
+            border-color: #334155;
+            color: #e2e8f0;
+        }
+
+        body.dark-theme .card-settings {
+            background: #0f172a;
+            border-color: #334155;
+        }
+
+        body.dark-theme .form-label-custom {
+            color: #e2e8f0;
+        }
+
+        body.dark-theme .form-control-custom,
+        body.dark-theme .form-select-custom {
+            background: #1e293b;
+            border-color: #334155;
+            color: #e2e8f0;
+        }
+
+        body.dark-theme .mode-switch {
+            background: #0f172a;
+            border-color: #334155;
+        }
+
+        body.dark-theme .mode-btn.active {
+            background: #1e293b;
+            color: var(--primary-color);
+        }
+
+        body.dark-theme .checkbox-box {
+            background: #0f172a;
+            border-color: #334155;
+        }
+
+        .field-card {
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+            position: relative;
+            transition: all 0.2s;
+        }
+
+        .field-card:hover {
+            border-color: var(--primary-color);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .field-card-remove {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: #ef4444;
+            cursor: pointer;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.2s;
+        }
+
+        .field-card-remove:hover {
+            background: #fee2e2;
+        }
+
+        .border-dashed {
+            border-style: dashed !important;
+            border-width: 2px !important;
+        }
+
+        /* Animations & Dev Mode Visuals */
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-in {
+            animation: fadeInDown 0.4s ease-out forwards;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .pulse-animation {
+            animation: pulse 2s infinite;
+        }
+
+        body.dev-mode-active {
+            --tm-accent: #f59e0b;
+        }
+
+        .dev-badge-container {
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .instruction-card {
+            border-left: 4px solid var(--tm-accent);
+            background: var(--tm-accent-soft);
+            padding: 16px 20px;
+        }
+
+        .instruction-card p {
+            margin: 0;
+            font-size: 14px;
+            color: var(--tm-text-secondary);
+            line-height: 1.6;
+        }
+
+        body.dark-theme .instruction-card {
+            background: rgba(245, 158, 11, 0.08);
+        }
+
+        body.dark-theme .field-card {
+            background: #0f172a;
+            border-color: #334155;
+        }
+    </style>
+</head>
+
+<body>
+      <div data-include="components/header.html"></div>
+
+    <section class="section-padding" style="padding-top: 6rem;">
+        <div class="container">
+            <div class="row justify-content-center mb-5">
+                <div class="col-lg-10 text-center">
+                    <h1 class="display-5 fw-bold mb-3">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>Генератор модулей <span id="modeBadge"
+                            class="badge bg-secondary ms-2"
+                            style="font-size: 0.4em; vertical-align: middle;">SIMPLE</span>
+                    </h1>
+                    <p class="lead text-secondary">
+                        Профессиональный инструмент для быстрого создания каркаса модуля по стандартам OpenCart
+                    </p>
+                </div>
+            </div>
+
+            <div class="generator-container">
+                <div class="mode-switch-wrapper">
+                    <div class="mode-switch">
+                        <button class="mode-btn active" id="simpleModeBtn" onclick="switchMode('simple')">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Простой режим
+                        </button>
+                        <button class="mode-btn" id="devModeBtn" onclick="switchMode('dev')">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg> Режим разработчика
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Dev Mode Guide -->
+                <div class="dev-only" style="display: none; margin-bottom: 2rem;">
+                    <div class="card card-settings instruction-card">
+                        <div class="card-body p-4">
+                            <div class="row align-items-center">
+                                <div class="col-md-8">
+                                    <h4 class="fw-bold mb-2">🚀 Добро пожаловать в режим разработчика</h4>
+                                    <p class="mb-0 text-secondary">
+                                        В этом режиме вы можете использовать <strong>Конструктор полей</strong>,
+                                        настраивать <strong>пути к шаблонам (Theme)</strong> и задавать
+                                        <strong>кастомные имена ассетов</strong>.
+                                    </p>
+                                </div>
+                                <div class="col-md-4 text-md-end mt-3 mt-md-0">
+                                    <button class="btn btn-outline-primary btn-demo" onclick="loadDemoFields()">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 4V2"/><path d="M15 16v-2"/><path d="M8 9h2"/><path d="M20 9h2"/><path d="M17.8 11.8L19 13"/><path d="M15 9h0"/><path d="M17.8 6.2L19 5"/><path d="M11 6h0"/><path d="M7.8 11.8L5 13"/><path d="M11 16h0"/><path d="M7.8 6.2L5 5"/><path d="M2 22l10-10"/></svg>Собери сам
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-4">
+                    <!-- Left Column: Settings -->
+                    <div class="col-lg-6">
+                        <div class="card-settings">
+                            <h5 class="file-options-title mb-4">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>Основные настройки
+                            </h5>
+
+                            <div class="mb-3">
+                                <label class="form-label-custom">Тип расширения:</label>
+                                <select class="form-select form-select-custom" id="moduleType" onchange="updateUI()">
+                                    <option value="module">Модуль (Module)</option>
+                                    <option value="payment">Оплата (Payment)</option>
+                                    <option value="shipping">Доставка (Shipping)</option>
+                                    <option value="total">Учитывать в заказе (Total)</option>
+                                    <option value="feed">Каналы продвижения (Feed)</option>
+                                    <option value="report">Отчеты (Report)</option>
+                                    <option value="dashboard">Панель управления (Dashboard)</option>
+                                    <option value="analytics">Аналитика (Analytics)</option>
+                                    <option value="captcha">Капча (Captcha) </option>
+                                    <option value="fraud">Защита от мошенничества (Fraud)</option>
+                                    <option value="theme">Шаблон (Theme)</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3" id="multiModuleGroup">
+                                <label class="custom-checkbox-item">
+                                    <input type="checkbox" id="isMultiModule" onchange="updateUI()">
+                                    <div class="checkbox-box"></div>
+                                    <span class="checkbox-label">Поддержка нескольких экземпляров (Multi-module)</span>
+                                </label>
+                                <small class="text-muted d-block mt-1 ms-4">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                                    Позволяет устанавливать модуль несколько раз с разными настройками (например, разные
+                                    баннеры на разных страницах).
+                                </small>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label-custom">Название модуля (отображаемое):</label>
+                                <input type="text" class="form-control form-control-custom" id="moduleName"
+                                    placeholder="Например: Доставка до двери" oninput="onModuleNameInput()">
+                            </div>
+
+                            <div class="mb-3" id="moduleDescriptionGroup" style="display: none;">
+                                <label class="form-label-custom">Описание модуля:</label>
+                                <input type="text" class="form-control form-control-custom" id="moduleDescription"
+                                    placeholder="Краткое описание метода оплаты/доставки" oninput="updateUI()">
+                                <small class="text-muted">Отображается покупателю при выборе способа
+                                    оплаты/доставки</small>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label-custom">Кодовое имя (codename):</label>
+                                <input type="text" class="form-control form-control-custom" id="moduleCode"
+                                    placeholder="Генерируется автоматически" oninput="onCodenameInput()">
+                                <small class="text-muted">Только латиница, цифры и подчеркивание. Генерируется
+                                    автоматически из названия.</small>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label-custom">Версия:</label>
+                                    <input type="text" class="form-control form-control-custom" id="moduleVersion"
+                                        value="1.0.0" oninput="updateUI()">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label-custom">Автор:</label>
+                                    <input type="text" class="form-control form-control-custom" id="moduleAuthor"
+                                        value="Opencart Клуб" oninput="updateUI()">
+                                </div>
+                            </div>
+
+                            <!-- Developer Specific Settings -->
+                            <div class="dev-only border-top pt-3 mt-2" style="display: none;">
+                                <h6 class="fw-bold mb-3">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>Настройки разработчика
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity:0.6" title="Настройки путей и имен файлов для продвинутых разработчиков"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                                </h6>
+                                <div class="mb-3">
+                                    <label class="form-label-custom">
+                                        Название темы (Theme):
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="cursor:help;margin-left:4px"
+                                            title="Если вы используете сторонний шаблон (Unishop, Journal и т.д.), укажите его имя, чтобы файлы попали в нужную папку theme/{name}/"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                                    </label>
+                                    <input type="text" class="form-control form-control-custom" id="themeName"
+                                        value="default" placeholder="Например: default или unishop2"
+                                        oninput="updateUI()">
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label-custom">
+                                            Кастомный JS:
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="cursor:help;margin-left:4px"
+                                                title="Имя файла в catalog/view/javascript/{codename}/. Если пусто - используется codename."><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                                        </label>
+                                        <input type="text" class="form-control form-control-custom" id="customJsName"
+                                            placeholder="Имя файла без .js" oninput="updateUI()">
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label-custom">
+                                            Кастомный CSS:
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="cursor:help;margin-left:4px"
+                                                title="Имя файла в catalog/view/javascript/{codename}/. Если пусто - используется codename."><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                                        </label>
+                                        <input type="text" class="form-control form-control-custom" id="customCssName"
+                                            placeholder="Имя файла без .css" oninput="updateUI()">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Files & Tree -->
+                    <div class="col-lg-6">
+                        <div class="card-settings">
+                            <h5 class="file-options-title mb-4">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>Структура и файлы
+                            </h5>
+
+
+                            <div class="option-group">
+                                <span class="option-group-label">Админка (Admin)</span>
+                                <label class="custom-checkbox-item">
+                                    <input type="checkbox" id="createAdminModel" checked onchange="updateUI()">
+                                    <div class="checkbox-box"></div>
+                                    <span class="checkbox-label">Модель (Model)</span>
+                                </label>
+                                <small class="text-muted d-block mb-2">Контроллер, Язык и Шаблон создаются
+                                    всегда.</small>
+                            </div>
+
+                            <div class="option-group">
+                                <span class="option-group-label">Витрина (Catalog)</span>
+                                <div class="row">
+                                    <div class="col-6">
+                                        <label class="custom-checkbox-item">
+                                            <input type="checkbox" id="createCatalogController" checked
+                                                onchange="updateUI()">
+                                            <div class="checkbox-box"></div>
+                                            <span class="checkbox-label">Контроллер</span>
+                                        </label>
+                                        <label class="custom-checkbox-item">
+                                            <input type="checkbox" id="createCatalogModel" checked
+                                                onchange="updateUI()">
+                                            <div class="checkbox-box"></div>
+                                            <span class="checkbox-label">Модель</span>
+                                        </label>
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="custom-checkbox-item">
+                                            <input type="checkbox" id="createCatalogView" checked onchange="updateUI()">
+                                            <div class="checkbox-box"></div>
+                                            <span class="checkbox-label">Шаблон (Twig)</span>
+                                        </label>
+                                        <label class="custom-checkbox-item">
+                                            <input type="checkbox" id="createCatalogLanguage" checked
+                                                onchange="updateUI()">
+                                            <div class="checkbox-box"></div>
+                                            <span class="checkbox-label">Язык</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="option-group mb-0">
+                                <span class="option-group-label">Экстра-файлы (Extra Files)</span>
+                                <div class="row">
+                                    <div class="col-12">
+                                        <label class="custom-checkbox-item">
+                                            <input type="checkbox" id="createOcmod" onchange="updateUI()">
+                                            <div class="checkbox-box"></div>
+                                            <span class="checkbox-label">Модификатор (install.xml)</span>
+                                        </label>
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="custom-checkbox-item">
+                                            <input type="checkbox" id="createJs" onchange="updateUI()">
+                                            <div class="checkbox-box"></div>
+                                            <span class="checkbox-label">JavaScript файл</span>
+                                        </label>
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="custom-checkbox-item">
+                                            <input type="checkbox" id="createCss" onchange="updateUI()">
+                                            <div class="checkbox-box"></div>
+                                            <span class="checkbox-label">CSS файл</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="tree-container" style="padding:0;">
+                            <div class="tm-code-header">
+                                <span class="tm-code-dots"><span></span><span></span><span></span></span>
+                                <span class="tm-code-title">Структура модуля</span>
+                            </div>
+                            <div id="fileTree" style="padding:24px;">
+                                <!-- File tree will be generated here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-center mt-5 simple-only">
+                    <button class="btn btn-primary btn-generate" onclick="generateModule()">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 00-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 012-3.95A12.88 12.88 0 0122 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 01-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>Создать и скачать модуль (.zip)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Dev Mode Sections -->
+            <div id="devModeSections" class="dev-only" style="display: none;">
+                <div class="generator-container">
+                    <div class="row">
+                        <div class="col-lg-8">
+                            <h5 class="file-options-title mb-4">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>Конструктор полей (Fields
+                                Constructor)
+                            </h5>
+
+                            <div id="noFieldsAlert" class="alert alert-light text-center border-dashed py-5">
+                                <p class="text-secondary mb-0">Поля еще не добавлены. Используйте панель справа,
+                                    чтобы добавить поля.</p>
+                            </div>
+                            <div id="fieldsContainer" class="mb-4">
+                                <!-- Fields will be added here -->
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4">
+                            <div class="card-settings">
+                                <h5 class="file-options-title mb-3">Добавить поле</h5>
+                                <div class="d-grid gap-2">
+                                    <button class="btn btn-outline-primary text-start p-2" onclick="addField('text')">
+                                        <div class="d-flex align-items-center">
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+                                            <div>
+                                                <div class="fw-bold">Текстовое поле (Text)</div>
+                                                <small class="text-muted d-block">Для коротких строк, заголовков</small>
+                                            </div>
+                                        </div>
+                                    </button>
+                                    <button class="btn btn-outline-primary text-start p-2"
+                                        onclick="addField('textarea')">
+                                        <div class="d-flex align-items-center">
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 4v16"/><path d="M17 4v16"/><path d="M13 4H9a4 4 0 000 8h4"/></svg>
+                                            <div>
+                                                <div class="fw-bold">Текст (Textarea)</div>
+                                                <small class="text-muted d-block">Для больших текстов, HTML-кода</small>
+                                            </div>
+                                        </div>
+                                    </button>
+                                    <button class="btn btn-outline-primary text-start p-2" onclick="addField('select')">
+                                        <div class="d-flex align-items-center">
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                                            <div>
+                                                <div class="fw-bold">Список (Select)</div>
+                                                <small class="text-muted d-block">Выбор значения из выпадающего
+                                                    списка</small>
+                                            </div>
+                                        </div>
+                                    </button>
+                                    <button class="btn btn-outline-primary text-start p-2" onclick="addField('toggle')">
+                                        <div class="d-flex align-items-center">
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="5" width="22" height="14" rx="7" ry="7"/><circle cx="16" cy="12" r="3"/></svg>
+                                            <div>
+                                                <div class="fw-bold">Переключатель (Toggle)</div>
+                                                <small class="text-muted d-block">Да/Нет, Включить/Выключить</small>
+                                            </div>
+                                        </div>
+                                    </button>
+                                    <button class="btn btn-outline-primary text-start p-2" onclick="addField('image')">
+                                        <div class="d-flex align-items-center">
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                                            <div>
+                                                <div class="fw-bold">Выбор изображения</div>
+                                                <small class="text-muted d-block">Стандартный файловый менеджер
+                                                    OC</small>
+                                            </div>
+                                        </div>
+                                    </button>
+                                </div>
+
+                                <hr class="my-4">
+
+                                <h5 class="file-options-title mb-3">Дополнительно</h5>
+                                <label class="custom-checkbox-item">
+                                    <input type="checkbox" id="generateEvents" onchange="updateUI()">
+                                    <div class="checkbox-box"></div>
+                                    <span class="checkbox-label">Генерировать Events</span>
+                                </label>
+                                <label class="custom-checkbox-item">
+                                    <input type="checkbox" id="generateAjax" onchange="updateUI()">
+                                    <div class="checkbox-box"></div>
+                                    <span class="checkbox-label">Генерировать AJAX API</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="generator-container">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="file-options-title mb-0">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>Предпросмотр кода
+                        </h5>
+                        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse"
+                            data-bs-target="#codePreviewCollapse" aria-expanded="false"
+                            aria-controls="codePreviewCollapse">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>Показать / Скрыть
+                        </button>
+                    </div>
+                    <div class="collapse" id="codePreviewCollapse">
+                        <div class="d-flex justify-content-end mb-3">
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-sm btn-outline-secondary active"
+                                    onclick="selectPreviewFile('controller', this)">Admin Controller</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary"
+                                    onclick="selectPreviewFile('view', this)">Admin View</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary"
+                                    onclick="selectPreviewFile('ocmod', this)">install.xml</button>
+                            </div>
+                        </div>
+                        <div class="tree-container" style="padding:0;">
+                            <div class="tm-code-header">
+                                <span class="tm-code-dots"><span></span><span></span><span></span></span>
+                                <span class="tm-code-title">Предпросмотр кода</span>
+                                <button class="tm-code-copy" data-copy="codePreview">Копировать</button>
+                            </div>
+                            <div style="padding:24px;">
+                                <pre id="codePreview" class="mb-0"
+                                    style="font-size: 13px; line-height: 1.72; color: var(--tm-code-text); background: none; border: none; padding: 0; margin: 0;">// Здесь будет предпросмотр кода...</pre>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dev Mode: Generate Button at bottom -->
+                    <div class="text-center mt-4 dev-only" style="display: none;">
+                        <button class="btn btn-primary btn-generate btn-lg" onclick="generateModule()">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 00-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 012-3.95A12.88 12.88 0 0122 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 01-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>Создать и скачать модуль (.zip)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div id="toast" class="toast-msg"></div>
+
+      <div data-include="components/footer.html"></div>
+
+
+    <!-- Scripts -->
+    <script src="js/main.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <!-- JSZip for client-side zip creation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+    <script src="src/module_generator.js"></script>
+</body>
+
+</html>

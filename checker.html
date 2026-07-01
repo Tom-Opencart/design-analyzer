@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Проверка сайта на варез | Opencart Клуб</title>
+    <meta name="description" content="Проверьте сайт на нарушение лицензий и авторских прав (варез) с помощью инструмента Opencart Клуба.">
+    <meta name="keywords" content="варез, проверка сайта, лицензии, авторские права, Opencart, интернет-магазин, безопасность">
+    <meta property="og:title" content="Проверка сайта на варез | Opencart Клуб">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://opencartforum.com.ru/checker.html">
+    <meta property="og:description" content="Проверьте сайт на нарушение лицензий и авторских прав (варез) с помощью инструмента Opencart Клуба.">
+    <meta property="og:site_name" content="Opencart Клуб">
+    <meta property="og:locale" content="ru_RU">
+    <link rel="canonical" href="https://opencartforum.com.ru/checker.html" />
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": "Проверка сайта на варез | Opencart Клуб",
+        "url": "https://opencartforum.com.ru/checker.html",
+        "description": "Проверьте сайт на нарушение лицензий и авторских прав (варез) с помощью инструмента Opencart Клуба."
+    }
+    </script>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/style.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-mono/style.css">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+</head>
+
+<body class="compact-page">
+    <div data-include="components/header.html"></div>
+
+    <section class="page-header">
+        <div class="container">
+            <span class="eyebrow">Инструмент</span>
+            <h1>Проверка сайта на <span class="title-highlight">варез</span></h1>
+            <p>Введите URL сайта, чтобы проверить, присутствует ли он в списке ресурсов, распространяющих нелицензионные или пиратские материалы.</p>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="container">
+            <div class="frame" style="max-width:640px;margin:0 auto;padding:24px;">
+                <div class="field-group">
+                    <label for="websiteInput">URL сайта</label>
+                    <input type="text" class="form-control" id="websiteInput" placeholder="Например: https://example.com или example.com">
+                </div>
+                <button type="button" class="button button-primary button-block" id="checkButton">Проверить</button>
+                <div id="dbInfo" style="display:none;margin-top:12px;font-family:var(--tm-font-mono);font-size:11px;color:var(--tm-muted);letter-spacing:0.04em;text-align:center;"></div>
+                <div id="resultMessage"></div>
+            </div>
+        </div>
+    </section>
+
+    <div data-include="components/footer.html"></div>
+
+    <script src="js/main.js"></script>
+</body>
+
+</html>

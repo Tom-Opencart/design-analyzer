@@ -1,0 +1,36 @@
+# 1.To use URL Alias you need to be running apache with mod_rewrite enabled.
+
+# 2. In your opencart directory rename htaccess.txt to .htaccess.
+
+# For any support issues please visit: http://www.opencart.com
+
+Options +FollowSymlinks
+
+# Prevent Directory listing
+Options -Indexes
+
+# Prevent Direct Access to files
+<FilesMatch "(?i)((\.tpl|\.twig|\.ini|\.log|(?<!robots)\.txt))">
+ Require all denied
+## For apache 2.2 and older, replace "Require all denied" with these two lines :
+# Order deny,allow
+# Deny from all
+</FilesMatch>
+
+# SEO URL Settings
+RewriteEngine On
+# If your opencart installation does not run on the main web folder make sure you folder it does run in ie. / becomes /shop/
+
+RewriteBase /
+
+AddType application/x-httpd-php .xml
+RewriteRule ^index\.html$ / [R=301,L]
+RewriteCond %{HTTP_HOST} ^www\.(.*)$ [NC]
+RewriteRule ^ https://%1%{REQUEST_URI} [R=301,L]
+RewriteCond %{HTTP:X-Forwarded-Proto} =http [OR]
+RewriteCond %{HTTP:X-Forwarded-Proto} =""
+RewriteCond %{HTTP:X-HTTPS} !1 [OR]
+RewriteCond %{HTTPS} !=on
+RewriteCond %{REQUEST_URI} !robots\.txt
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+                                                  

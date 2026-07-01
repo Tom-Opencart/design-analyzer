@@ -1,0 +1,1406 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Конструктор контента OpenCart | Opencart Клуб</title>
+  <meta name="description" content="Визуальный редактор (конструктор блоков) для быстрого создания описаний товаров, категорий и статей для OpenCart 3.">
+  <meta name="keywords" content="конструктор контента, OpenCart, визуальный редактор, разметка, статьи, сетка, табы, спойлеры">
+  <meta property="og:title" content="Конструктор контента OpenCart | Opencart Клуб">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://opencartforum.com.ru/content_constructor.html">
+  <meta property="og:description" content="Визуальный редактор (конструктор блоков) для быстрого создания описаний товаров, категорий и статей для OpenCart 3.">
+  <meta property="og:site_name" content="Opencart Клуб">
+  <meta property="og:locale" content="ru_RU">
+  <link rel="canonical" href="https://opencartforum.com.ru/content_constructor.html" />
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/style.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-mono/style.css">
+  <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="stylesheet" href="content-constructor/css/constructor.css?v=1.6.6">
+
+  <style>
+    * { border-radius: 0px !important; }
+    html, body {
+      height: auto !important;
+      overflow: auto !important;
+    }
+    .constructor-app-wrapper {
+      height: calc(100vh - 82px); /* header only */
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .constructor-app-wrapper .main {
+      height: calc(100vh - 82px - 56px) !important;
+    }
+    .constructor-app-wrapper, 
+    .constructor-app-wrapper input, 
+    .constructor-app-wrapper button, 
+    .constructor-app-wrapper textarea {
+      font-family: 'Inter', sans-serif !important;
+    }
+    /* Legacy variable aliases */
+    :root { --border-color: var(--tm-line); --primary-color: var(--tm-text); --light-bg: var(--tm-surface-alt); --text-color: var(--tm-text); --secondary-color: var(--tm-muted); }
+    /* Force shared footer appearance over Bootstrap */
+    .site-footer {
+      padding: 48px 0 !important;
+      border-top: 1px solid var(--tm-line-muted) !important;
+      background: var(--tm-surface) !important;
+      color: var(--tm-text-secondary) !important;
+      font-family: var(--tm-font-sans) !important;
+    }
+    .site-footer .footer-grid { display: grid !important; grid-template-columns: 2fr 1fr 1fr !important; gap: 42px !important; }
+    .site-footer .footer-grid strong { display: block !important; margin-bottom: 12px !important; font-size: 16px !important; text-transform: uppercase !important; letter-spacing: 0.06em !important; color: var(--tm-text) !important; }
+    .site-footer .footer-grid p { color: var(--tm-text-secondary) !important; font-size: 14px !important; line-height: 1.6 !important; }
+    .site-footer .footer-grid span { display: block !important; margin-bottom: 12px !important; font-family: var(--tm-font-mono) !important; font-size: 11px !important; font-weight: 700 !important; letter-spacing: 0.12em !important; text-transform: uppercase !important; color: var(--tm-muted) !important; }
+    .site-footer .footer-grid a { display: block !important; padding: 4px 0 !important; font-size: 14px !important; color: var(--tm-text-secondary) !important; text-decoration: none !important; }
+    .site-footer .footer-grid a:hover { color: var(--tm-text) !important; }
+    .site-footer .footer-bottom { display: flex !important; align-items: center !important; justify-content: space-between !important; margin-top: 42px !important; padding-top: 24px !important; border-top: 1px solid var(--tm-line-muted) !important; }
+    .site-footer .footer-bottom p { font-size: 13px !important; color: var(--tm-muted) !important; margin: 0 !important; }
+    .site-footer .footer-bottom a { display: inline-flex !important; align-items: center !important; gap: 6px !important; font-family: var(--tm-font-mono) !important; font-size: 12px !important; font-weight: 700 !important; letter-spacing: 0.06em !important; text-transform: uppercase !important; color: var(--tm-muted) !important; text-decoration: none !important; }
+    .site-footer .footer-bottom a:hover { color: var(--tm-text) !important; }
+    @media (max-width: 980px) { .site-footer .footer-grid { grid-template-columns: 1fr 1fr !important; } }
+    @media (max-width: 560px) { .site-footer .footer-grid { grid-template-columns: 1fr !important; } .site-footer .footer-bottom { flex-direction: column !important; gap: 12px !important; text-align: center !important; } }
+  </style>
+</head>
+
+<body>
+  <div data-include="components/header.html"></div>
+
+  <div class="constructor-app-wrapper">
+    <!-- Recovery Banner -->
+<div id="recoveryBanner" class="recovery-banner" style="display: none;">
+    <div class="recovery-text">
+        <i class="fa fa-life-ring"></i>
+        <span>Найдена автосохраненная копия проекта от <strong id="recoveryTime"></strong>. Восстановить работу?</span>
+    </div>
+    <div class="recovery-actions">
+        <button id="btnRestoreAutosave" class="btn btn-primary">Восстановить</button>
+        <button id="btnDiscardAutosave" class="btn btn-ghost">Скрыть</button>
+    </div>
+</div>
+
+<header class="header">
+    <div class="header-left">
+        <button id="btnTogglePalette" class="btn-hamburger" title="Блоки контента">
+            <i class="fa fa-bars"></i>
+        </button>
+        <div class="header-brand">
+            <h1 class="header-title">Content Constructor</h1>
+            <div class="header-meta">
+                <span>Автор Tom</span>
+                <span id="buildIndicator" class="build-indicator" title="Версия загруженной runtime-сборки">build: --</span>
+            </div>
+        </div>
+    </div>
+    <div class="header-center">
+        <div class="hint-wrapper hint-wrapper--title">
+            <span class="slug-hint" title="Заголовок материала. Используется в &lt;title&gt; страницы при экспорте HTML и как основа для автоматической генерации SEO-слага.">
+                <i class="fa fa-question-circle"></i>
+            </span>
+            <input type="text" id="articleTitle" class="header-title-input" placeholder="Название статьи..." value="Apple Watch: обзор умных часов">
+        </div>
+        <div class="slug-wrapper">
+            <span class="slug-hint" title="SEO-слаг (ЧПУ): автоматически формируется из заголовка. Используется как имя файла при экспорте (content-{slug}.html) и соответствует полю «SEO URL» в OpenCart. Можно отредактировать вручную.">
+                <i class="fa fa-question-circle"></i>
+            </span>
+            <input type="text" id="articleSlug" class="header-slug-input" placeholder="slug-fajla" value="apple-watch-obzor">
+            <button class="slug-copy-btn" id="btnCopySlug" title="Скопировать slug">
+                <i class="fa fa-clone"></i>
+            </button>
+        </div>
+        <div class="hint-wrapper hint-wrapper--domain">
+            <span class="slug-hint" title="Домен магазина. Используется для формирования ссылок в превью и в шапке экспортируемого HTML-файла. Не влияет на сам контент статьи.">
+                <i class="fa fa-question-circle"></i>
+            </span>
+            <input type="text" id="articleDomain" class="header-domain-input" placeholder="https://example.ru/" value="https://example.ru/">
+        </div>
+    </div>
+    <div class="header-right">
+        <button id="btnHelp" class="btn btn-secondary btn-help-header" title="Справка — как пользоваться конструктором">
+            <span class="btn-icon"><i class="fa fa-question-circle"></i></span>
+            <span class="btn-text">Справка</span>
+        </button>
+
+        <button id="btnToggleHeaderFields" class="btn btn-secondary btn-mobile-fields" title="Поля статьи">
+            <span class="btn-icon"><i class="fa fa-sliders"></i></span>
+        </button>
+
+
+
+        <input type="file" id="importFile" accept=".json,.html,.txt" style="display: none;">
+
+        <div class="header-dropdown" id="importAiDropdown">
+            <button class="btn btn-secondary" title="Загрузка проекта и AI-функции">
+                <span class="btn-icon"><i class="fa fa-bars"></i></span>
+                <span class="btn-text">Импорт / AI</span>
+                <i class="fa fa-caret-down" style="font-size: 11px; margin-left: 2px;"></i>
+            </button>
+            <div class="header-dropdown-menu wide-menu">
+                <div class="dropdown-section">
+                    <div class="dropdown-section-title"><i class="fa fa-file-code-o"></i> Проект (JSON, HTML)</div>
+                    <button type="button" id="btnImportJSON" class="header-dropdown-item">
+                        <i class="fa fa-upload" style="color: #2980b9;"></i>
+                        <div class="item-text">
+                            <div class="item-title">Импортировать файл (.json, .html)</div>
+                            <div class="item-desc">Загрузить копию проекта или файл импорта Summernote</div>
+                        </div>
+                    </button>
+                    <button type="button" id="btnClipboardPasteJSON" class="header-dropdown-item">
+                        <i class="fa fa-paste" style="color: #27ae60;"></i>
+                        <div class="item-text">
+                            <div class="item-title">Вставить JSON из буфера</div>
+                            <div class="item-desc">Загрузить JSON проекта из буфера обмена</div>
+                        </div>
+                    </button>
+                </div>
+
+                <div class="dropdown-section">
+                    <div class="dropdown-section-title"><i class="fa fa-magic" style="color: #5446f8;"></i> Интеграция с ИИ</div>
+                    <button type="button" id="btnAiAssistant" class="header-dropdown-item">
+                        <i class="fa fa-commenting-o" style="color: #5446f8;"></i>
+                        <div class="item-text">
+                            <div class="item-title">Сформировать AI-запрос</div>
+                            <div class="item-desc">Создать и скопировать промпт с JSON для ИИ</div>
+                        </div>
+                    </button>
+                    <button type="button" id="btnAiImport" class="header-dropdown-item">
+                        <i class="fa fa-check-circle-o" style="color: #2f80ed;"></i>
+                        <div class="item-text">
+                            <div class="item-title">Вставить ответ от AI</div>
+                            <div class="item-desc">Распознать и импортировать ответ от ИИ</div>
+                        </div>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="header-dropdown" id="downloadDropdown">
+            <button class="btn btn-primary" title="Скачать или копировать результаты">
+                <span class="btn-icon"><i class="fa fa-download"></i></span>
+                <span class="btn-text">Скачать / Экспорт</span>
+                <i class="fa fa-caret-down" style="font-size: 11px; margin-left: 2px;"></i>
+            </button>
+            <div class="header-dropdown-menu wide-menu">
+                <div class="dropdown-section">
+                    <div class="dropdown-section-title"><i class="fa fa-code" style="color: #27ae60;"></i> Вставка в OpenCart (HTML)</div>
+                    <button type="button" id="btnExportTXT" class="header-dropdown-item">
+                        <i class="fa fa-file-text-o" style="color: #e67e22;"></i>
+                        <div class="item-text">
+                            <div class="item-title">Скачать файл для Summernote (.html)</div>
+                            <div class="item-desc">Сохранить готовый HTML-файл для прямой загрузки через кнопку импорта в редакторе</div>
+                        </div>
+                    </button>
+                </div>
+
+                <div class="dropdown-section">
+                    <div class="dropdown-section-title"><i class="fa fa-file-archive-o" style="color: #9b59b6;"></i> Автоматическая загрузка (ZIP)</div>
+                    <button type="button" id="btnExportZIP" class="header-dropdown-item">
+                        <i class="fa fa-file-archive-o" style="color: #9b59b6;"></i>
+                        <div class="item-text">
+                            <div class="item-title">Скачать ZIP-архив статьи</div>
+                            <div class="item-desc">HTML-код статьи и картинки одним архивом (рекомендуется)</div>
+                        </div>
+                    </button>
+                    <button type="button" id="btnDownloadZipDropdown" class="header-dropdown-item">
+                        <i class="fa fa-cloud-download" style="color: #2980b9;"></i>
+                        <div class="item-text">
+                            <div class="item-title">Скачать ZIP-модификатор стилей</div>
+                            <div class="item-desc">ZIP-архив расширения для автоматического подключения стилей (нужен 1 раз)</div>
+                        </div>
+                    </button>
+                </div>
+
+                <div class="dropdown-section">
+                    <div class="dropdown-section-title"><i class="fa fa-file-code-o" style="color: #34495e;"></i> Резервная копия (JSON проекта)</div>
+                    <button type="button" id="btnExportJSON" class="header-dropdown-item">
+                        <i class="fa fa-download" style="color: #7f8c8d;"></i>
+                        <div class="item-text">
+                            <div class="item-title">Скачать файл проекта (.json)</div>
+                            <div class="item-desc">Сохранить копию проекта на компьютер для последующего редактирования</div>
+                        </div>
+                    </button>
+                    <button type="button" id="btnClipboardCopyJSON" class="header-dropdown-item">
+                        <i class="fa fa-copy" style="color: #34495e;"></i>
+                        <div class="item-text">
+                            <div class="item-title">Скопировать JSON-код</div>
+                            <div class="item-desc">Скопировать JSON-код структуры в буфер обмена</div>
+                        </div>
+                    </button>
+                </div>
+
+                <div class="dropdown-section">
+                    <div class="dropdown-section-title"><span class="css-icon-dropdown" style="color: #7f8c8d;">{ }</span> Настройка стилей (CSS)</div>
+                    <button type="button" id="btnExportCSS" class="header-dropdown-item">
+                        <span class="css-icon-dropdown" style="color: #7f8c8d;">{ }</span>
+                        <div class="item-text">
+                            <div class="item-title">Скачать CSS-стили</div>
+                            <div class="item-desc">Скачать файл со стилями оформления страниц для ручного подключения</div>
+                        </div>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <button id="btnCopyHTML" class="btn btn-primary" title="Копировать HTML-код статьи">
+            <span class="btn-icon"><i class="fa fa-code"></i></span>
+            <span class="btn-text">Копировать код</span>
+        </button>
+
+        <button id="btnShowPreview" class="btn btn-secondary btn-preview-toggle" title="Показать или скрыть превью">
+            <span class="btn-icon"><i class="fa fa-eye"></i></span>
+        </button>
+        <div class="mobile-actions">
+            <button id="btnToggleActions" class="btn btn-secondary btn-mobile-actions" title="Дополнительные действия">
+                <span class="btn-icon"><i class="fa fa-ellipsis-h"></i></span>
+            </button>
+            <div id="mobileActionsMenu" class="mobile-actions-menu">
+                <button type="button" class="mobile-actions-item" data-forward-click="#btnCopyHTML">
+                    <i class="fa fa-code"></i><span>Копировать HTML</span>
+                </button>
+                <button type="button" class="mobile-actions-item" data-forward-click="#btnExportTXT">
+                    <i class="fa fa-file-text-o"></i><span>Скачать для Summernote</span>
+                </button>
+                <button type="button" class="mobile-actions-item" data-forward-click="#btnExportZIP">
+                    <i class="fa fa-file-archive-o"></i><span>Скачать ZIP статьи</span>
+                </button>
+                <button type="button" class="mobile-actions-item" data-forward-click="#btnExportCSS">
+                    <i class="fa fa-css3"></i><span>Скачать CSS</span>
+                </button>
+                <button type="button" class="mobile-actions-item" data-forward-click="#btnImportJSON">
+                    <i class="fa fa-upload"></i><span>Импорт JSON</span>
+                </button>
+                <button type="button" class="mobile-actions-item" data-forward-click="#btnClipboardPasteJSON">
+                    <i class="fa fa-paste"></i><span>Вставить JSON</span>
+                </button>
+                <button type="button" class="mobile-actions-item" data-forward-click="#btnExportJSON">
+                    <i class="fa fa-download"></i><span>Экспорт JSON</span>
+                </button>
+                <button type="button" class="mobile-actions-item" data-forward-click="#btnClipboardCopyJSON">
+                    <i class="fa fa-copy"></i><span>Копировать JSON</span>
+                </button>
+                <button type="button" class="mobile-actions-item" data-forward-click="#btnAiAssistant" style="color: #5446f8; font-weight: bold;">
+                    <i class="fa fa-magic"></i><span>AI Запрос</span>
+                </button>
+                <button type="button" class="mobile-actions-item" data-forward-click="#btnAiImport" style="color: #2f80ed; font-weight: bold;">
+                    <i class="fa fa-magic"></i><span>AI Импорт</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</header>
+
+<div class="main">
+
+    <!-- LEFT PANEL: Block palette -->
+    <aside class="panel-left" id="blockPalette">
+        <div class="block-buttons">
+            <!-- Группа 1: Текст и таблицы -->
+            <div class="palette-group-title">Текст и таблицы</div>
+            <button class="block-btn" data-block-type="heading" title="Заголовок H1-H3">
+                <span class="block-btn-icon">H</span>
+                <span class="block-btn-label">Заголовок</span>
+            </button>
+            <button class="block-btn" data-block-type="paragraph" title="Параграф">
+                <span class="block-btn-icon">P</span>
+                <span class="block-btn-label">Параграф</span>
+            </button>
+            <button class="block-btn" data-block-type="ordered-list" title="Нумерованный список">
+                <span class="block-btn-icon">1.</span>
+                <span class="block-btn-label">Список (нум.)</span>
+            </button>
+            <button class="block-btn" data-block-type="unordered-list" title="Маркированный список">
+                <span class="block-btn-icon">&bull;</span>
+                <span class="block-btn-label">Список (маркер.)</span>
+            </button>
+            <button class="block-btn" data-block-type="quote" title="Цитата">
+                <span class="block-btn-icon">"</span>
+                <span class="block-btn-label">Цитата</span>
+            </button>
+            <button class="block-btn" data-block-type="table" title="Таблица">
+                <span class="block-btn-icon">&#9638;</span>
+                <span class="block-btn-label">Таблица</span>
+            </button>
+            <button class="block-btn" data-block-type="comparison" title="Сравнение характеристик">
+                <span class="block-btn-icon" style="font-size:14px; font-weight:bold;">VS</span>
+                <span class="block-btn-label">Сравнение</span>
+            </button>
+            <button class="block-btn" data-block-type="toc" title="Оглавление (авто)">
+                <span class="block-btn-icon">&#9776;</span>
+                <span class="block-btn-label">Оглавление</span>
+            </button>
+
+            <!-- Группа 2: Медиа и слайдеры -->
+            <div class="palette-group-title">Медиа и слайдеры</div>
+            <button class="block-btn" data-block-type="image" title="Изображение">
+                <span class="block-btn-icon">&#9636;</span>
+                <span class="block-btn-label">Изображение</span>
+            </button>
+            <button class="block-btn" data-block-type="video" title="Адаптивное видео (YouTube/Vimeo)">
+                <span class="block-btn-icon"><i class="fa fa-youtube-play"></i></span>
+                <span class="block-btn-label">Видео</span>
+            </button>
+            <button class="block-btn" data-block-type="carousel" title="Слайдер изображений (Bootstrap 3)">
+                <span class="block-btn-icon"><i class="fa fa-sliders"></i></span>
+                <span class="block-btn-label">Слайдер</span>
+            </button>
+            <button class="block-btn" data-block-type="before-after" title="Слайдер До/После">
+                <span class="block-btn-icon"><i class="fa fa-arrows-h"></i></span>
+                <span class="block-btn-label">До / После</span>
+            </button>
+
+            <!-- Группа 3: Интерактив и структура -->
+            <div class="palette-group-title">Интерактив и структура</div>
+            <button class="block-btn" data-block-type="grid" title="Bootstrap 3 сетка из нескольких секций">
+                <span class="block-btn-icon">&#9635;</span>
+                <span class="block-btn-label">Сетка</span>
+            </button>
+            <button class="block-btn" data-block-type="spoiler" title="Спойлер / Аккордеон">
+                <span class="block-btn-icon">+&minus;</span>
+                <span class="block-btn-label">Спойлер</span>
+            </button>
+            <button class="block-btn" data-block-type="tabs" title="Вкладки">
+                <span class="block-btn-icon">&#9654;</span>
+                <span class="block-btn-label">Вкладки</span>
+            </button>
+            <button class="block-btn" data-block-type="faq" title="Часто задаваемые вопросы (FAQ)">
+                <span class="block-btn-icon">?</span>
+                <span class="block-btn-label">FAQ</span>
+            </button>
+            <button class="block-btn" data-block-type="popup" title="Всплывающее окно OpenCart">
+                <span class="block-btn-icon"><i class="fa fa-window-restore"></i></span>
+                <span class="block-btn-label">Попап окно</span>
+            </button>
+
+            <!-- Группа 4: Инфо-блоки и продажи -->
+            <div class="palette-group-title">Инфо-блоки и продажи</div>
+            <button class="block-btn" data-block-type="link" title="Ссылка">
+                <span class="block-btn-icon">&#128279;</span>
+                <span class="block-btn-label">Ссылка</span>
+            </button>
+            <button class="block-btn" data-block-type="callout" title="Инфо-блок / Скачивание файла (Bootstrap 3)">
+                <span class="block-btn-icon"><i class="fa fa-info-circle"></i></span>
+                <span class="block-btn-label">Инфо-блок</span>
+            </button>
+            <button class="block-btn" data-block-type="alert" title="Уведомление / Alert (Bootstrap 3)">
+                <span class="block-btn-icon"><i class="fa fa-exclamation-circle"></i></span>
+                <span class="block-btn-label">Alert блок</span>
+            </button>
+            <button class="block-btn" data-block-type="messengers" title="Кнопки мессенджеров (Связь)">
+                <span class="block-btn-icon"><i class="fa fa-commenting-o"></i></span>
+                <span class="block-btn-label">Мессенджеры</span>
+            </button>
+            <button class="block-btn" data-block-type="product-card" title="Карточка товара OpenCart">
+                <span class="block-btn-icon"><i class="fa fa-shopping-cart"></i></span>
+                <span class="block-btn-label">Карточка товара</span>
+            </button>
+        </div>
+        <div class="panel-theme">
+            <div class="panel-theme-title"><i class="fa fa-paint-brush" style="color: #4a90d9; margin-right: 4px;"></i> Тема оформления</div>
+            <select id="themeSelect" class="theme-select" title="Выберите цветовую тему">
+                <option value="default" selected>Фиолетовая (базовая)</option>
+                <option value="blue">Синяя классика</option>
+                <option value="emerald">Изумрудный зеленый</option>
+                <option value="orange">Теплый оранжевый</option>
+                <option value="red">Свежий красный</option>
+                <option value="dark">Темная тема (Modern Dark)</option>
+                <option value="custom">Пользовательская...</option>
+            </select>
+            <div id="themeCustomColors" class="theme-custom-colors" style="display: none;">
+                <div class="color-picker-group">
+                    <span>Акцент:</span>
+                    <input type="color" id="colorAccent" value="#5446f8" title="Цвет кнопок, ссылок и акцентов">
+                </div>
+                <div class="color-picker-group">
+                    <span>Фон:</span>
+                    <input type="color" id="colorBg" value="#F3F2FF" title="Цвет фона блоков и таблиц">
+                </div>
+                <div class="color-picker-group">
+                    <span>Текст:</span>
+                    <input type="color" id="colorText" value="#1A1A1A" title="Цвет текста">
+                </div>
+                <div class="theme-custom-actions" style="margin-top: 8px; display: flex; gap: 6px;">
+                    <button id="btnSaveTheme" class="btn-theme-action" style="flex: 1; font-size: 11px; padding: 5px 8px; border-radius: 4px; border: 1px solid #ccc; background: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; font-weight: 500;" title="Сохранить цвета как новую тему">
+                        <i class="fa fa-save"></i> Сохранить тему
+                    </button>
+                    <button id="btnDeleteTheme" class="btn-theme-action" style="font-size: 11px; padding: 5px 8px; border-radius: 4px; border: 1px solid #ffcccc; background: #fff5f5; color: #d63031; cursor: pointer; display: none; align-items: center; justify-content: center;" title="Удалить эту пользовательскую тему">
+                        <i class="fa fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="panel-support">
+            <button class="block-btn donate-btn" id="btnDonate" title="Отблагодарить автора">
+                <span class="block-btn-icon"><i class="fa fa-heart"></i></span>
+                <span class="block-btn-label" style="font-weight: 600;">Отблагодарить</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- CENTER: Workspace -->
+    <main class="workspace" id="workspace">
+        <div class="workspace-empty" id="workspaceEmpty">
+            <p>Добавьте блоки из панели слева</p>
+        </div>
+        <div class="blocks-container" id="blocksContainer"></div>
+    </main>
+
+    <!-- RIGHT: Live preview -->
+    <aside class="panel-right" id="previewPanel">
+        <div class="panel-title-container">
+            <div class="panel-preview-title">Превью</div>
+            <div style="display: flex; gap: 4px; align-items: center;">
+                <button id="btnOpenNewWindow" class="panel-action-btn" title="Открыть в новом окне" style="background: none; border: none; color: #999; cursor: pointer; font-size: 15px; padding: 4px 8px; transition: color 0.2s;">
+                    <i class="fa fa-external-link"></i>
+                </button>
+                <button id="btnToggleFullscreen" class="panel-action-btn" title="Развернуть на весь экран" style="background: none; border: none; color: #999; cursor: pointer; font-size: 15px; padding: 4px 8px; transition: color 0.2s;">
+                    <i class="fa fa-expand"></i>
+                </button>
+                <button id="btnHidePreview" class="panel-action-btn preview-toggle-btn" title="Скрыть / Показать превью">
+                    <i class="fa fa-eye-slash"></i> <span class="preview-toggle-label">Скрыть</span>
+                </button>
+            </div>
+        </div>
+        <div class="preview-content" id="previewContent">
+            <p class="preview-empty">Превью появится после добавления блоков</p>
+        </div>
+    </aside>
+
+</div>
+
+<!-- HELP MODAL -->
+<div id="helpModal" class="modal-overlay" style="display: none;">
+    <div class="modal-window help-modal-window">
+        <div class="modal-header">
+            <h2><i class="fa fa-info-circle" style="color: #4a90d9;"></i> Руководство пользователя и интеграция</h2>
+            <button class="modal-close" id="btnCloseHelp">&times;</button>
+        </div>
+        <div class="help-tabs-nav">
+            <button class="help-tab-btn active" data-help-tab="help-install"><i class="fa fa-cogs"></i> Установка</button>
+            <button class="help-tab-btn" data-help-tab="help-text"><i class="fa fa-font"></i> Оформление текста</button>
+            <button class="help-tab-btn" data-help-tab="help-blocks"><i class="fa fa-cubes"></i> Сложные блоки</button>
+            <button class="help-tab-btn" data-help-tab="help-images"><i class="fa fa-picture-o"></i> Ссылки и картинки</button>
+            <button class="help-tab-btn" data-help-tab="help-ai"><i class="fa fa-magic"></i> AI функции</button>
+        </div>
+        <div class="modal-body help-modal-body">
+            <!-- TAB 1: INSTALLATION -->
+            <div class="help-tab-content active" id="help-install">
+                <h3 style="margin-top: 0; color: #333;"><i class="fa fa-hand-pointer-o"></i> Кнопки в шапке конструктора</h3>
+                <p>В верхней части экрана расположены кнопки управления. Вот что делает каждая из них:</p>
+
+                <table class="help-table-guide" style="margin: 12px 0;">
+                    <thead>
+                        <tr>
+                            <th style="width: 25%;">Меню / Кнопка</th>
+                            <th>Что делает</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><i class="fa fa-question-circle" style="color:#4a90d9;"></i> <strong>Справка</strong></td>
+                            <td>Открывает это руководство — вы сейчас здесь</td>
+                        </tr>
+                        <tr>
+                            <td><i class="fa fa-bars"></i> <strong>Импорт / AI</strong></td>
+                            <td>
+                                Выпадающее меню для загрузки данных в конструктор:
+                                <ul style="margin: 4px 0 0 0; padding-left: 20px; font-size: 12px; color: #555;">
+                                    <li><strong>Импортировать файл (.json, .html)</strong> — загрузить сохраненную копию проекта (.json) или файл импорта Summernote (.html)</li>
+                                    <li><strong>Вставить JSON из буфера</strong> — загрузить JSON структуры из буфера обмена</li>
+                                    <li><strong>Сформировать AI-запрос</strong> — создать и скопировать промпт с JSON для ChatGPT/Gemini</li>
+                                    <li><strong>Вставить ответ от AI</strong> — распознать и импортировать ответ от нейросети из буфера</li>
+                                </ul>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><i class="fa fa-code" style="color:#4a90d9;"></i> <strong>Копировать код</strong></td>
+                            <td>Синяя кнопка для мгновенного копирования HTML-кода статьи в буфер обмена (для вставки в текстовый редактор OpenCart через кнопку &lt;/&gt;)</td>
+                        </tr>
+                        <tr>
+                            <td><i class="fa fa-download" style="color:#4a90d9;"></i> <strong>Скачать / Экспорт</strong></td>
+                            <td>
+                                Главное меню для сохранения результатов работы в файлы:
+                                <ul style="margin: 4px 0 0 0; padding-left: 20px; font-size: 12px; color: #555;">
+                                    <li><strong>Скачать файл для Summernote (.html)</strong> (иконка <i class="fa fa-file-text-o"></i>) — сохраняет HTML-файл для импорта напрямую в редактор</li>
+                                    <li><strong>Скачать ZIP-архив статьи</strong> (иконка <i class="fa fa-file-archive-o"></i>) — собирает HTML-код и картинки в один архив для загрузки на сайт (рекомендуемый способ)</li>
+                                    <li><strong>Скачать ZIP-модификатор стилей</strong> (иконка <i class="fa fa-cloud-download"></i>) — скачивает установочный модификатор для автоматического подключения стилей к сайту</li>
+                                    <li><strong>Скачать файл проекта (.json)</strong> — сохраняет проект для редактирования в будущем</li>
+                                    <li><strong>Скопировать JSON-код</strong> — копирует JSON проекта в буфер обмена</li>
+                                    <li><strong>Скачать CSS-стили</strong> (иконка { }) — скачивает файл стилей для ручного подключения</li>
+                                </ul>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><i class="fa fa-eye"></i> <strong>Превью</strong></td>
+                            <td>Показывает или скрывает панель предварительного просмотра справа</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3 style="color: #333; margin-top: 24px;"><i class="fa fa-rocket" style="color: #27ae60;"></i> Как загрузить созданную статью на сайт</h3>
+                <p>
+                    Вы собрали статью в конструкторе и хотите показать её на своём сайте. Вот <strong>самая простая инструкция</strong> — следуйте пунктам по порядку:
+                </p>
+
+                <h3 style="color: #27ae60; margin-top: 18px;">Шаг 1. Подключите стили к сайту (один раз)</h3>
+                <p>
+                    Чтобы ваша статья выглядела красиво (шрифты, отступы, таблицы, кнопки), нужно один раз подключить стили. Есть два способа — выберите любой:
+                </p>
+
+                <p><strong>Способ А: Автоматический (рекомендуется)</strong></p>
+                <div class="download-box" style="background: #eef9f0; border-color: #c3e6cb; padding: 15px; margin: 12px 0;">
+                    <div class="download-box-text">
+                        <div class="download-box-title" style="font-size: 14px; color: #27ae60; font-weight: bold;">Скачайте ZIP-файл для установки</div>
+                        <div class="download-box-desc" style="font-size: 12px; color: #555; margin-top: 4px;">
+                            Нажмите кнопку — скачается ZIP-архив. Затем загрузите его на сайт (см. инструкцию ниже).
+                        </div>
+                    </div>
+                    <button class="btn-download-xml" id="btnDownloadZip" style="background: #27ae60; padding: 10px 16px; font-size: 12px;">
+                        <i class="fa fa-file-archive-o"></i> Скачать ZIP-файл
+                    </button>
+                </div>
+
+                <div class="help-example-box">
+                    <strong>Что делать со скачанным ZIP-файлом:</strong>
+                    <ol class="help-steps-list" style="margin-top: 8px;">
+                        <li>Откройте админ-панель вашего сайта. Обычно это адрес <code>ваш-сайт.ru/admin</code>. Введите логин и пароль.</li>
+                        <li>Слева в меню нажмите <strong>«Расширения»</strong>. В подменю выберите <strong>«Установка расширений»</strong>.</li>
+                        <li>В правом верхнем углу нажмите синюю кнопку <strong>«Загрузить»</strong>.</li>
+                        <li>В открывшемся окне найдите скачанный ZIP-файл (он называется <code>content_constructor.ocmod.zip</code>) и выберите его.</li>
+                        <li>Дождитесь сообщения об успешной загрузке.</li>
+                        <li>Снова слева в меню нажмите <strong>«Расширения»</strong>, но теперь выберите <strong>«Менеджер модификаторов»</strong>.</li>
+                        <li>В правом верхнем углу нажмите синюю кнопку <strong>«Обновить»</strong> (с круговыми стрелками).</li>
+                        <li>Готово! Стили подключены.</li>
+                    </ol>
+                </div>
+
+                <p><strong>Способ Б: Ручной</strong></p>
+                <div class="help-example-box">
+                    <ol class="help-steps-list">
+                        <li>В меню <strong>«Скачать / Экспорт»</strong> выберите <strong>«Скачать CSS-стили»</strong> — скачется файл <code>content-constructor.css</code>.</li>
+                        <li>Откройте этот файл любым текстовым редактором (Блокнот, Notepad++). Выделите весь текст (<code>Ctrl+A</code>) и скопируйте (<code>Ctrl+C</code>).</li>
+                        <li>Подключитесь к вашему сайту по FTP (или через файловый менеджер в админке).</li>
+                        <li>Найдите файл стилей вашей темы: <code>catalog/view/theme/название_темы/stylesheet/stylesheet.css</code></li>
+                        <li>Откройте его и вставьте скопированные стили в самое конец файла.</li>
+                        <li>Сохраните файл.</li>
+                    </ol>
+                </div>
+
+                <h3 style="color: #27ae60; margin-top: 18px;">Шаг 2. Сохраните статью и загрузите на сайт</h3>
+                <p>Теперь, когда стили подключены, самое время загрузить вашу статью. Есть два варианта:</p>
+
+                <p><strong>Вариант 1: Через кнопку импорта в админке (самый простой)</strong></p>
+                <div class="help-example-box" style="background: #eef9f0; border-color: #c3e6cb;">
+                    <p style="margin: 0 0 8px 0;"><strong>Этот вариант работает, если вы установили ZIP-файл (Способ А выше).</strong></p>
+                    <ol class="help-steps-list" style="margin: 0;">
+                        <li>В меню <strong>«Скачать / Экспорт»</strong> выберите <strong>«Скачать ZIP-архив статьи»</strong>. Скачается ZIP-архив с HTML-кодом и картинками.</li>
+                        <li>Откройте админ-панель сайта и перейдите к редактированию товара или статьи, куда хотите вставить контент.</li>
+                        <li>Найдите текстовый редактор (Summernote). В его панели инструментов нажмите группу <strong>«Вставить»</strong> (последняя иконка в ряду).</li>
+                        <li>Среди иконок найдите <span style="color: #27ae60; font-weight: bold;">зелёную иконку файла</span> (<i class="fa fa-file-text-o" style="color:#27ae60;"></i>). Нажмите на неё.</li>
+                        <li>Выберите скачанный HTML-файл из конструктора (или ZIP — откроется файл <code>content-{slug}.html</code>).</li>
+                        <li>Контент автоматически загрузится в редактор!</li>
+                        <li>Нажмите <strong>«Сохранить»</strong>.</li>
+                    </ol>
+                </div>
+
+                <p><strong>Вариант 2: Вставка кода вручную</strong></p>
+                <div class="help-example-box">
+                    <p style="margin: 0 0 8px 0;">Если кнопка импорта не появилась или вы предпочитаете вставлять код сами:</p>
+                    <ol class="help-steps-list" style="margin: 0;">
+                        <li>В конструкторе нажмите синюю кнопку <i class="fa fa-code" style="color:#4a90d9;"></i> <strong>«Копировать код»</strong>.</li>
+                        <li>Откройте редактор товара или статьи в админке OpenCart.</li>
+                        <li>Переключите редактор в режим <strong>HTML</strong> (обычно это кнопка <strong>«&lt;&gt;»</strong> или <strong>«Исходный код»</strong> на панели инструментов).</li>
+                        <li>Удалите всё, что есть в поле, и вставьте скопированный код (<code>Ctrl+V</code>).</li>
+                        <li>Переключите редактор обратно в обычный режим (кнопка <strong>«&lt;&gt;»</strong> ещё раз).</li>
+                        <li>Проверьте результат и нажмите <strong>«Сохранить»</strong>.</li>
+                    </ol>
+                </div>
+
+                <h3 style="color: #27ae60; margin-top: 18px;">Шаг 3. Проверьте результат</h3>
+                <div class="help-example-box" style="background: #fff8e1; border-color: #ffe080;">
+                    <ol class="help-steps-list" style="margin: 0;">
+                        <li>Откройте страницу товара или статьи на вашем сайте (не в админке, а на самом сайте).</li>
+                        <li>Если контент отображается некрасиво — нажмите <code>Ctrl + F5</code> для очистки кэша браузера.</li>
+                        <li>Если всё ещё некрасиво — убедитесь, что стили подключены (Шаг 1).</li>
+                    </ol>
+                </div>
+
+                <div class="help-example-box" style="background: #fff3e0; border-color: #ffcc80; margin-top: 16px;">
+                    <p style="margin: 0;"><strong>Частые ошибки:</strong></p>
+                    <ul style="margin: 8px 0 0 0;">
+                        <li>Кнопка импорта не появилась → нажмите <code>Ctrl + F5</code> на странице редактора</li>
+                        <li>Картинки не отображаются → убедитесь, что домен в шапке конструктора совпадает с вашим сайтом</li>
+                        <li>Стили не применяются → проверьте, что CSS-файл подключён (Шаг 1)</li>
+                    </ul>
+                </div>
+
+                <h3 style="color: #333; margin-top: 24px;"><i class="fa fa-info-circle"></i> Что означают заголовки в шапке</h3>
+                <div class="help-example-box">
+                    <p style="margin: 0 0 8px 0;"><strong>Название статьи</strong> — вводится в первом поле в шапке. Используется как заголовок страницы при экспорте HTML и как основа для генерации слага.</p>
+                    <p style="margin: 0 0 8px 0;"><strong>Slug</strong> — автоматически генерируется из названия (например, <code>apple-watch-obzor</code>). Используется как имя файла при экспорте. Можно отредактировать вручную.</p>
+                    <p style="margin: 0;"><strong>Домен</strong> — адрес вашего сайта (например, <code>https://мой-магазин.ru/</code>). Используется для отображения картинок в превью. Не влияет на сам контент.</p>
+                </div>
+
+                <h3 style="color: #333; margin-top: 24px;"><i class="fa fa-paint-brush" style="color: #27ae60;"></i> Как изменить цвета</h3>
+                <p>
+                    Если вам не подходят стандартные цвета конструктора, их можно быстро заменить в файле стилей <code>content-constructor.css</code>. Для этого откройте сохранённый CSS-файл в текстовом редакторе <strong>Notepad++</strong> (или любом другом) и воспользуйтесь функцией массовой замены (сочетание клавиш <code>Ctrl + H</code>).
+                </p>
+                <div class="help-example-box" style="background: #fafafa; border-color: #ddd;">
+                    <p style="margin: 0 0 8px 0;"><strong>Основные цвета в коде:</strong></p>
+                    <ul style="margin: 0 0 0 16px; padding: 0;">
+                        <li style="margin-bottom: 6px;"><code>#5446f8</code> — Основной синий цвет (цвет бордера слева от цитирования, активные вкладки, кнопки, ссылки).</li>
+                        <li style="margin-bottom: 6px;"><code>#cfd8dc</code> — Серый цвет рамки иконки вопроса в FAQ.</li>
+                        <li style="margin-bottom: 6px;"><code>#78909c</code> — Цвет самого знака вопроса <code>?</code> внутри круглой иконки в FAQ.</li>
+                        <li style="margin-bottom: 6px;"><code>#eaeaea</code> — Цвет горизонтальных линий-разделителей под блоками FAQ.</li>
+                    </ul>
+                    <p style="margin: 12px 0 0 0; font-size: 13px; color: #555;">
+                        <strong>Пример замены:</strong> Чтобы заменить основной синий цвет на свой (например, зеленый <code>#27ae60</code>), откройте файл CSS, нажмите <code>Ctrl + H</code>, введите в поле <i>«Найти»</i> значение <code>#5446f8</code>, а в поле <i>«Заменить на»</i> — <code>#27ae60</code>, после чего нажмите кнопку <strong>«Заменить все»</strong>.
+                    </p>
+                </div>
+            </div>
+
+            <!-- TAB 2: TEXT FORMATTING -->
+            <div class="help-tab-content" id="help-text" style="display: none;">
+                <h3 style="margin-top: 0; color: #333;"><i class="fa fa-edit"></i> Как писать и оформлять текст</h3>
+                <p>
+                    Конструктор понимает простые символы для форматирования. Вы пишете их обычным текстом, а конструктор автоматически превращает их в красивое оформление. Вот что можно делать:
+                </p>
+
+                <h3 style="color: #333; margin-top: 18px;"><strong>Жирный текст</strong></h3>
+                <p>Оберните текст в две звёздочки с каждой стороны:</p>
+                <div class="help-example-box">
+                    <div class="help-example-input">
+                        <strong>Вы пишете:</strong><br>
+                        <code>Это очень <strong>важная</strong> информация</code>
+                    </div>
+                    <div class="help-example-output">
+                        <strong>На сайте будет:</strong><br>
+                        <span style="font-size:14px;">Это очень <strong>важная</strong> информация</span>
+                    </div>
+                </div>
+                <p style="color: #888; font-size: 12px;">Когда нужно выделить ключевое слово, название продукта, цену или любую важную мысль.</p>
+
+                <h3 style="color: #333; margin-top: 18px;"><em>Курсивный текст</em></h3>
+                <p>Оберните текст в одну звёздочку с каждой стороны:</p>
+                <div class="help-example-box">
+                    <div class="help-example-input">
+                        <strong>Вы пишете:</strong><br>
+                        <code>Модель <em>Pro Max</em> отличается увеличенным экраном</code>
+                    </div>
+                    <div class="help-example-output">
+                        <strong>На сайте будет:</strong><br>
+                        <span style="font-size:14px;">Модель <em>Pro Max</em> отличается увеличенным экраном</span>
+                    </div>
+                </div>
+                <p style="color: #888; font-size: 12px;">Для названий моделей, иностранных слов, цитат или терминов.</p>
+
+                <h3 style="color: #333; margin-top: 18px;">Ссылки</h3>
+                <p>Напишите текст ссылки в квадратных скобках, а адрес — в круглых:</p>
+                <div class="help-example-box">
+                    <div class="help-example-input">
+                        <strong>Вы пишете:</strong><br>
+                        <code>Подробнее на <a href="#" style="color:#5446f8;text-decoration:underline;">нашем сайте</a></code><br><br>
+                        <span style="color: #888;">или так:</span><br>
+                        <code>[Подробнее на нашем сайте](https://example.ru/catalog)</code>
+                    </div>
+                    <div class="help-example-output">
+                        <strong>На сайте будет:</strong><br>
+                        <span style="font-size:14px;">Подробнее на <a href="#" style="color:#5446f8;text-decoration:underline;">нашем сайте</a></span>
+                    </div>
+                </div>
+                <p style="color: #888; font-size: 12px;">Ссылки на другие страницы вашего каталога, на инструкции, на сторонние ресурсы.</p>
+
+                <h3 style="color: #333; margin-top: 18px;">Маркированный список (с тире)</h3>
+                <p>Каждый пункт начинайте с тире или минуса:</p>
+                <div class="help-example-box">
+                    <div class="help-example-input">
+                        <strong>Вы пишете:</strong><br>
+                        <code>
+- Алюминиевый корпус<br>
+- Влагозащита IP68<br>
+- Батарея на 2 дня
+                        </code>
+                    </div>
+                    <div class="help-example-output">
+                        <strong>На сайте будет:</strong><br>
+                        <ul style="margin: 5px 0 0 0;">
+                            <li>Алюминиевый корпус</li>
+                            <li>Влагозащита IP68</li>
+                            <li>Батарея на 2 дня</li>
+                        </ul>
+                    </div>
+                </div>
+                <p style="color: #888; font-size: 12px;">Для перечисления характеристик, преимуществ, комплектации.</p>
+
+                <h3 style="color: #333; margin-top: 18px;">Нумерованный список (по порядку)</h3>
+                <p>Каждый пункт начинайте с цифры и точки:</p>
+                <div class="help-example-box">
+                    <div class="help-example-input">
+                        <strong>Вы пишете:</strong><br>
+                        <code>
+1. Включите устройство<br>
+2. Подключитесь к Wi-Fi<br>
+3. Следуйте инструкциям на экране
+                        </code>
+                    </div>
+                    <div class="help-example-output">
+                        <strong>На сайте будет:</strong><br>
+                        <ol style="margin: 5px 0 0 0;">
+                            <li>Включите устройство</li>
+                            <li>Подключитесь к Wi-Fi</li>
+                            <li>Следуйте инструкциям на экране</li>
+                        </ol>
+                    </div>
+                </div>
+                <p style="color: #888; font-size: 12px;">Для пошаговых инструкций, порядка действий, этапов установки.</p>
+
+                <h3 style="color: #333; margin-top: 18px;">Список характеристик (Параметр :: Значение)</h3>
+                <p>Введите два двоеточия между названием параметра и его значением:</p>
+                <div class="help-example-box">
+                    <div class="help-example-input">
+                        <strong>Вы пишете:</strong><br>
+                        <code>
+Вес :: 52 грамма<br>
+Экран :: 1.9 дюйма AMOLED<br>
+Время работы :: до 18 часов<br>
+Водозащита :: 50 метров
+                        </code>
+                    </div>
+                    <div class="help-example-output">
+                        <strong>На сайте будет:</strong><br>
+                        <dl class="preview-dl" style="margin: 5px 0 0 0;">
+                            <dt style="font-weight:bold; color:#1a1a1a; margin-top: 4px; font-size:13px; font-family: sans-serif;">Вес</dt>
+                            <dd style="margin-left: 10px; color:#555; font-size:13px; font-family: sans-serif; margin-bottom: 5px;">52 грамма</dd>
+                            <dt style="font-weight:bold; color:#1a1a1a; margin-top: 4px; font-size:13px; font-family: sans-serif;">Экран</dt>
+                            <dd style="margin-left: 10px; color:#555; font-size:13px; font-family: sans-serif; margin-bottom: 5px;">1.9 дюйма AMOLED</dd>
+                            <dt style="font-weight:bold; color:#1a1a1a; margin-top: 4px; font-size:13px; font-family: sans-serif;">Время работы</dt>
+                            <dd style="margin-left: 10px; color:#555; font-size:13px; font-family: sans-serif; margin-bottom: 5px;">до 18 часов</dd>
+                            <dt style="font-weight:bold; color:#1a1a1a; margin-top: 4px; font-size:13px; font-family: sans-serif;">Водозащита</dt>
+                            <dd style="margin-left: 10px; color:#555; font-size:13px; font-family: sans-serif; margin-bottom: 5px;">50 метров</dd>
+                        </dl>
+                    </div>
+                </div>
+                <p style="color: #888; font-size: 12px;">Идеально для описания характеристик товара — получается аккуратный список «название — значение».</p>
+
+                <div class="help-example-box" style="background: #fff8e1; border-color: #ffe082;">
+                    <p style="margin: 0;"><strong>Важно:</strong> Markdown-форматирование работает в блоках «Параграф», «Спойлер» и «Вкладки». В заголовках, цитатах и таблицах оно не нужно — там текст и так форматируется.</p>
+                </div>
+            </div>
+
+            <!-- TAB 3: COMPLEX BLOCKS -->
+            <div class="help-tab-content" id="help-blocks" style="display: none;">
+                <h3 style="margin-top: 0; color: #333;"><i class="fa fa-columns"></i> Сетка — размещение контента в колонки</h3>
+                <p>
+                    Блок «Сетка» позволяет расположить картинку слева, а текст справа (или наоборот). Или разбить контент на 3-4 колонки. Это как таблица, но для произвольного контента.
+                </p>
+
+                <p><strong>Как использовать — пошагово:</strong></p>
+                <ol class="help-steps-list">
+                    <li>В левой панели нажмите <strong>«Сетка»</strong> — в рабочей области появится блок с пустыми колонками.</li>
+                    <li>Нажмите на блок сетки кнопку <strong>«Редактировать»</strong> (карандаш) и настройте:
+                        <ul style="margin-top: 5px;">
+                            <li><strong>Сколько колонок:</strong> 2, 3 или 4</li>
+                            <li><strong>Ширина колонок:</strong> например, <code>6 + 6</code> — две равные половины; <code>4 + 4 + 4</code> — три равных трети; <code>3 + 9</code> — узкая левая и широкая правая</li>
+                            <li><strong>На телефоне:</strong> 1 в ряд (колонки по очереди) или 2 в ряд</li>
+                        </ul>
+                    </li>
+                    <li>Перетащите нужные блоки (картинку, текст, цитату) из левой панели <strong>прямо внутрь</strong> серой области нужной колонки.</li>
+                </ol>
+
+                <div class="help-example-box">
+                    <strong>Пример 1:</strong> Картинка слева + текст справа
+                    <div style="display: flex; gap: 10px; margin-top: 8px;">
+                        <div style="flex: 1; background: #f0f4ff; border: 1px dashed #4a90d9; border-radius: 6px; padding: 10px; text-align: center; color: #4a90d9; font-size: 12px;">
+                            <i class="fa fa-picture-o" style="font-size: 24px;"></i><br>Изображение<br><small>col-md-6</small>
+                        </div>
+                        <div style="flex: 1; background: #f0f4ff; border: 1px dashed #4a90d9; border-radius: 6px; padding: 10px; text-align: center; color: #4a90d9; font-size: 12px;">
+                            <i class="fa fa-align-left" style="font-size: 24px;"></i><br>Текст<br><small>col-md-6</small>
+                        </div>
+                    </div>
+                    <p style="margin: 8px 0 0; font-size: 12px; color: #888;">Настройки: 2 колонки, схема <code>6 + 6</code></p>
+                </div>
+
+                <div class="help-example-box">
+                    <strong>Пример 2:</strong> Три картинки рядом
+                    <div style="display: flex; gap: 10px; margin-top: 8px;">
+                        <div style="flex: 1; background: #f0f4ff; border: 1px dashed #4a90d9; border-radius: 6px; padding: 10px; text-align: center; color: #4a90d9; font-size: 12px;">
+                            <i class="fa fa-picture-o" style="font-size: 20px;"></i><br><small>col-md-4</small>
+                        </div>
+                        <div style="flex: 1; background: #f0f4ff; border: 1px dashed #4a90d9; border-radius: 6px; padding: 10px; text-align: center; color: #4a90d9; font-size: 12px;">
+                            <i class="fa fa-picture-o" style="font-size: 20px;"></i><br><small>col-md-4</small>
+                        </div>
+                        <div style="flex: 1; background: #f0f4ff; border: 1px dashed #4a90d9; border-radius: 6px; padding: 10px; text-align: center; color: #4a90d9; font-size: 12px;">
+                            <i class="fa fa-picture-o" style="font-size: 20px;"></i><br><small>col-md-4</small>
+                        </div>
+                    </div>
+                    <p style="margin: 8px 0 0; font-size: 12px; color: #888;">Настройки: 3 колонки, схема <code>4 + 4 + 4</code>, на телефоне «2 в ряд»</p>
+                </div>
+
+                <div class="help-example-box">
+                    <strong>Пример 3:</strong> Узкий текстовый блок слева, широкий контент справа
+                    <div style="display: flex; gap: 10px; margin-top: 8px;">
+                        <div style="flex: 0 0 25%; background: #f0f4ff; border: 1px dashed #4a90d9; border-radius: 6px; padding: 10px; text-align: center; color: #4a90d9; font-size: 12px;">
+                            <i class="fa fa-align-left" style="font-size: 20px;"></i><br>Цитата<br><small>col-md-3</small>
+                        </div>
+                        <div style="flex: 1; background: #f0f4ff; border: 1px dashed #4a90d9; border-radius: 6px; padding: 10px; text-align: center; color: #4a90d9; font-size: 12px;">
+                            <i class="fa fa-align-left" style="font-size: 24px;"></i><br>Основной текст<br><small>col-md-9</small>
+                        </div>
+                    </div>
+                    <p style="margin: 8px 0 0; font-size: 12px; color: #888;">Настройки: 2 колонки, схема <code>3 + 9</code></p>
+                </div>
+
+                <h3 style="color: #333; margin-top: 24px;"><i class="fa fa-toggle-down"></i> Спойлер (аккордеон) — скрытый текст</h3>
+                <p>
+                    Спойлер прячет длинный текст под заголовком. Пользователь видит только заголовок и нажимает на него, чтобы развернуть содержимое. Очень удобно для вопросов и ответов.
+                </p>
+
+                <p><strong>Где использовать:</strong></p>
+                <ul>
+                    <li>Раздел «Часто задаваемые вопросы (FAQ)»</li>
+                    <li>Длинные описания характеристик, которые не всем нужны</li>
+                    <li>Скрытые инструкции или подробности</li>
+                </ul>
+
+                <div class="help-example-box">
+                    <strong>Как выглядит для пользователя:</strong>
+                    <details style="margin-top: 8px; border: 1px solid #e0e0e0; border-radius: 5px; background: #fafafa;">
+                        <summary style="padding: 10px; cursor: pointer; font-weight: 600;">Можно ли использовать эти часы с Android?</summary>
+                        <div style="padding: 10px 30px; background: #fff;">
+                            К сожалению, нет. Apple Watch работают только с iPhone. Для активации нужен iPhone модели 6s или новее.
+                        </div>
+                    </details>
+                    <details style="margin-top: 4px; border: 1px solid #e0e0e0; border-radius: 5px; background: #fafafa;">
+                        <summary style="padding: 10px; cursor: pointer; font-weight: 600;">Какое время работы от батареи?</summary>
+                        <div style="padding: 10px 30px; background: #fff;">
+                            До 18 часов в обычном режиме. При активном использовании GPS — до 7 часов.
+                        </div>
+                    </details>
+                    <p style="margin: 8px 0 0; font-size: 12px; color: #888;">Пользователь видит только заголовки. Нажал — развернулся текст.</p>
+                </div>
+
+                <h3 style="color: #333; margin-top: 24px;"><i class="fa fa-folder-open-o"></i> Вкладки — группировка контента</h3>
+                <p>
+                    Вкладки позволяют разнести информацию по нескольким «страничкам» внутри одного блока. Пользователь нажимает на вкладку и видит только её содержимое.
+                </p>
+
+                <p><strong>Где использовать:</strong></p>
+                <ul>
+                    <li>«Характеристики» / «Описание» / «Комплектация» — для товара</li>
+                    <li>«Для кого» / «Противопоказания» / «Дозировка» — для лекарств</li>
+                    <li>Любая информация, которую удобно разделить на категории</li>
+                </ul>
+
+                <div class="help-example-box">
+                    <strong>Как выглядит для пользователя:</strong>
+                    <div class="preview-content" id="helpTabsPreview" style="padding: 0; background: transparent; margin-top: 8px;">
+                        <div class="article-tabs" style="margin: 0;">
+                            <div class="article-tabs-nav">
+                                <button class="active" data-tab="0">Характеристики</button>
+                                <button data-tab="1">Описание</button>
+                                <button data-tab="2">Комплектация</button>
+                            </div>
+                            <div class="article-tabs-panels">
+                                <div class="article-tabs-panel" style="display: block;">
+                                    <p style="margin: 0; font-size: 13px;">Экран 1.9", процессор S9, вес 52 г, водозащита IP68, аккумулятор 410 мАч.</p>
+                                </div>
+                                <div class="article-tabs-panel" style="display: none;">
+                                    <p style="margin: 0; font-size: 13px;">Смарт-часы нового поколения с продвинутым датчиком пульса, встроенным GPS и уведомлениями от смартфона.</p>
+                                </div>
+                                <div class="article-tabs-panel" style="display: none;">
+                                    <p style="margin: 0; font-size: 13px;">В комплекте: смарт-часы, магнитный кабель зарядки, инструкция по эксплуатации.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <p style="margin: 8px 0 0; font-size: 12px; color: #888;">Пользователь переключается между вкладками одним кликом.</p>
+                </div>
+
+                <div class="help-example-box" style="background: #fff8e1; border-color: #ffe082;">
+                    <p style="margin: 0;"><strong>Совет:</strong> Во время редактирования вкладок можно добавлять и удалять их, менять заголовки и содержимое. Каждая вкладка — это отдельное поле для текста.</p>
+                </div>
+
+                <h3 style="color: #333; margin-top: 24px;"><i class="fa fa-info-circle"></i> Инфо-блок (Callout / Скачивание файла)</h3>
+                <p>
+                    Инфо-блок позволяет выделить важную информацию, ссылки или файлы для скачивания в красивую плашку с фоном, акцентной рамкой и кнопкой действия.
+                </p>
+
+                <p><strong>Доступно 4 стиля оформления:</strong></p>
+                <ul>
+                    <li><strong>Серый блок (Well):</strong> Универсальная классическая плашка для файлов.</li>
+                    <li><strong>Синий инфо-блок (Info):</strong> Для полезной информации и заметок.</li>
+                    <li><strong>Зеленый блок успеха (Success):</strong> Для скачивания документов, лицензий или успешных уведомлений.</li>
+                    <li><strong>Желтый предупреждающий блок (Warning):</strong> Для важных предупреждений, на которые пользователь должен обратить внимание.</li>
+                </ul>
+
+                <div class="help-example-box">
+                    <strong>Возможности настройки:</strong>
+                    <ul style="margin-top: 5px;">
+                        <li>Выбор иконки (скачивание, ссылка, PDF, внимание, информация).</li>
+                        <li>Настройка заголовка, текста описания и ссылки кнопки.</li>
+                        <li>Адаптивная верстка (на мобильных устройствах кнопка и текст автоматически выстраиваются в один столбец для удобства).</li>
+                    </ul>
+                </div>
+
+                <h3 style="color: #333; margin-top: 24px;"><i class="fa fa-exclamation-circle"></i> Alert блок — цветные плашки примечаний</h3>
+                <p>
+                    Этот блок позволяет быстро выделить предупреждение, совет или примечание ярким цветом, привлекая внимание пользователя. Полностью совместим со стандартными классами Bootstrap 3.
+                </p>
+                <p><strong>Где использовать:</strong></p>
+                <ul>
+                    <li><strong>Синий (Info):</strong> Важные заметки, ссылки на справочные материалы или сопутствующий контент.</li>
+                    <li><strong>Зеленый (Success):</strong> Примеры правильного выполнения действий, успешные результаты или бонусы.</li>
+                    <li><strong>Желтый (Warning):</strong> Предупреждения о возможных рисках или нюансах (например: <em>"Перед началом работы отключите питание!"</em>).</li>
+                    <li><strong>Красный (Danger):</strong> Критические ошибки, запреты или ограничения, которые нельзя нарушать.</li>
+                </ul>
+
+                <h3 style="color: #333; margin-top: 24px;"><i class="fa fa-youtube-play"></i> Адаптивное видео — YouTube и Vimeo</h3>
+                <p>
+                    Вставка видеороликов с видеохостингов с автоматическим сохранением пропорций сторон 16:9 на любых экранах (от ПК до мобильных телефонов).
+                </p>
+                <p><strong>Как использовать:</strong></p>
+                <ul>
+                    <li>Добавьте блок «Видео».</li>
+                    <li>Вставьте полную ссылку на видео (например, <code>https://www.youtube.com/watch?v=dQw4w9WgXcQ</code> или короткую <code>youtu.be</code>).</li>
+                    <li>Конструктор автоматически распознает платформу и извлечет ID видео для корректного отображения адаптивного фрейма.</li>
+                </ul>
+
+                <h3 style="color: #333; margin-top: 24px;"><i class="fa fa-sliders"></i> Слайдер изображений — Карусель</h3>
+                <p>
+                    Интерактивная галерея изображений с возможностью пролистывания слайдов, текстовыми подписями поверх картинок и точечными индикаторами.
+                </p>
+                <p><strong>Рекомендации по заполнению:</strong></p>
+                <ul>
+                    <li>Старайтесь использовать картинки одинакового размера, чтобы избежать скачков высоты страницы при смене слайдов.</li>
+                    <li>Заполняйте поле <strong>Alt текст</strong> для улучшения поисковой оптимизации (SEO) картинок.</li>
+                    <li>Текстовые подписи к слайдам автоматически центрируются снизу на полупрозрачной подложке для лучшей читаемости.</li>
+                </ul>
+
+                <h3 style="color: #333; margin-top: 24px;"><i class="fa fa-arrows-h"></i> Слайдер До / После — Сравнение картинок</h3>
+                <p>
+                    Популярный интерактивный элемент, позволяющий пользователю плавно перетаскивать ползунок и сравнивать два изображения между собой (например, результат работы автосервиса, реставрации, тюнинга или ретуши).
+                </p>
+                <p><strong>Как сделать идеальный слайдер:</strong></p>
+                <ol style="padding-left: 20px;">
+                    <li>Обе картинки ("До" и "После") <strong>должны иметь строго одинаковые пропорции и разрешение</strong>.</li>
+                    <li>Для корректного рендеринга элементы накладываются друг на друга в виде фоновых слоев, поэтому ползунок аккуратно срезает верхнее изображение.</li>
+                    <li>Заполняйте ярлыки (например, "До установки" / "После установки") для понятного визуального ориентирования.</li>
+                </ol>
+
+                <h3 style="color: #333; margin-top: 24px;"><i class="fa fa-commenting-o"></i> Мессенджеры — Быстрая связь</h3>
+                <p>
+                    Блок красивых и кликабельных кнопок с иконками для моментального перехода к переписке в WhatsApp, Telegram, Viber или совершения прямого звонка с мобильного телефона.
+                </p>
+                <p><strong>Формат ввода данных:</strong></p>
+                <ul>
+                    <li><strong>WhatsApp:</strong> Номер телефона в формате <code>79991234567</code> (без плюсов, пробелов и скобок).</li>
+                    <li><strong>Telegram:</strong> Имя пользователя без символа @ (например: <code>username</code>) или полная ссылка на аккаунт/канал.</li>
+                    <li><strong>Viber:</strong> Номер в формате <code>79991234567</code> (конструктор сам сформирует специальный URI <code>viber://chat...</code>).</li>
+                    <li><strong>Телефон:</strong> Номер в формате <code>+79991234567</code> для осуществления вызова.</li>
+                </ul>
+
+                <h3 style="color: #333; margin-top: 24px;"><i class="fa fa-shopping-cart"></i> Карточка товара — Виджет для OpenCart</h3>
+                <p>
+                    Специальный блок, предназначенный для внутренней рекламы товаров вашего магазина прямо в теле статьи. Помогает конвертировать читателей блога в покупателей.
+                </p>
+                <p><strong>Где и как использовать:</strong></p>
+                <ul>
+                    <li>Вставляйте карточку товара в конце обзора или инструкции.</li>
+                    <li>Указывайте точное название, актуальную цену и привлекательную картинку товара.</li>
+                    <li>В поле ссылки укажите путь к товару (например: <code>index.php?route=product/product&product_id=50</code> или ЧПУ-ссылку).</li>
+                    <li>На мобильных устройствах карточка адаптивно перестраивается из горизонтального вида в вертикальный, чтобы изображение не сжималось.</li>
+                    <li>
+                        <strong>Автозаполнение по ссылке:</strong> Вы можете вставить ссылку на страницу товара на вашем сайте и нажать <strong>«Автозаполнение»</strong>. Конструктор автоматически импортирует название, цену и изображение.
+                        <br>
+                        <em>Важно:</em> Для правильного импорта и превью картинок не забудьте указать адрес вашего магазина в поле «Домен» в шапке конструктора. Скрипт сам уберет из ссылки папки кэша (<code>/image/cache/</code>) и суффиксы размеров, оставив путь к оригиналу картинки (например, <code>image/catalog/product.jpg</code>), который корректно отобразится после загрузки статьи на ваш сайт.
+                    </li>
+                </ul>
+            </div>
+
+            <!-- TAB 4: IMAGES AND LINKS -->
+            <div class="help-tab-content" id="help-images" style="display: none;">
+                <h3 style="margin-top: 0; color: #333;"><i class="fa fa-picture-o"></i> Как добавлять картинки</h3>
+                <p>
+                    Есть два способа работать с картинками. Выбирайте тот, который удобнее:
+                </p>
+
+                <h3 style="color: #333; margin-top: 18px;"><strong>Способ 1: Указать путь к картинке на сервере</strong></h3>
+                <p>
+                    Если картинка уже загружена на ваш сайт (или вы знаете, где она лежит), укажите путь к ней:
+                </p>
+                <div class="help-example-box">
+                    <div class="help-example-input">
+                        <strong>Примеры путей:</strong><br>
+                        <code>image/catalog/my-product.jpg</code> — картинка в папке каталога<br>
+                        <code>image/catalog/photos/watch-front.png</code> — картинка в подпапке<br>
+                        <code>https://example.ru/picture.jpg</code> — полная ссылка на интернет-ресурс
+                    </div>
+                </div>
+                <p style="color: #888; font-size: 12px;">В превью картинка будет отображаться только если в шапке конструктора указан домен вашего сайта (например, <code>https://ваш-сайт.ru/</code>).</p>
+
+                <h3 style="color: #333; margin-top: 18px;"><strong>Способ 2: Загрузить картинку с компьютера</strong></h3>
+                <p>Самый простой способ — загрузить картинку прямо из конструктора:</p>
+                <ol class="help-steps-list">
+                    <li>Добавьте блок «Изображение» в конструктор.</li>
+                    <li>Нажмите «Редактировать» (карандаш).</li>
+                    <li>В поле «Источник изображения» выберите <strong>«Загрузить локальный файл»</strong>.</li>
+                    <li>Нажмите «Выберите файл» и найдите картинку на компьютере.</li>
+                    <li>Картинка появится в превью!</li>
+                </ol>
+
+                <div class="help-example-box" style="background: #fff3e0; border-color: #ffcc80;">
+                    <p style="margin: 0;"><strong>Что происходит «под капотом»:</strong> Конструктор запоминает картинку как специальный код (base64). При экспорте ZIP-архива картинка автоматически сохраняется в правильную папку на сервере. Вам не нужно ничего делать вручную!</p>
+                </div>
+
+                <h3 style="color: #333; margin-top: 18px;"><strong>Что делать с готовой картинкой:</strong></h3>
+                <ul>
+                    <li><strong>«Скачать ZIP-архив статьи»</strong> (в меню «Скачать / Экспорт») — лучший вариант. Конструктор соберёт все картинки и HTML-код в один ZIP-файл. После загрузки на сервер через «Установку расширений» всё будет работать.</li>
+                    <li><strong>«Копировать код»</strong> (синяя кнопка в шапке) или <strong>«Скачать файл для Summernote»</strong> (в меню «Скачать / Экспорт») — скопирует или скачает HTML-код. Вам нужно будет вручную загрузить картинки на сервер через FTP или файловый менеджер OpenCart.</li>
+                </ul>
+
+                <h3 style="color: #27ae60; margin-top: 24px;"><i class="fa fa-window-restore"></i> Кнопки-ссылки для открытых статей (agree)</h3>
+                <p>
+                    В OpenCart есть функция показывать информационные страницы (например, «Политика конфиденциальности» или «Условия доставки») во всплывающем окне. Конструктор позволяет сделать такую ссылку на любое слово в тексте.
+                </p>
+
+                <p><strong>Как сделать ссылку на статью:</strong></p>
+                <div class="help-example-box">
+                    <div class="help-example-input">
+                        <strong>Простой формат:</strong><br>
+                        <code>[текст ссылки](agree:номер_статьи)</code><br><br>
+                        <strong>Пример 1:</strong><br>
+                        <code>[политикой конфиденциальности](agree:3)</code><br>
+                        На сайте появится ссылка: <a class="agree" href="#" style="color:#5446f8;font-weight:bold;">политикой конфиденциальности</a> — при клике откроется статья с номером 3.<br><br>
+                        <strong>Пример 2:</strong><br>
+                        <code>[условиями доставки](agree:6)</code><br>
+                        На сайте появится ссылка: <a class="agree" href="#" style="color:#5446f8;font-weight:bold;">условиями доставки</a> — при клике откроется статья с номером 6.<br><br>
+                        <strong>Пример 3:</strong><br>
+                        <code>[правилами возврата](agree:12)</code><br>
+                        На сайте появится ссылка: <a class="agree" href="#" style="color:#5446f8;font-weight:bold;">правилами возврата</a> — при клике откроется статья с номером 12.
+                    </div>
+                </div>
+
+                <p style="margin-top: 12px;"><strong>Где найти номер статьи (ID)?</strong></p>
+                <ol class="help-steps-list">
+                    <li>В админке OpenCart зайдите в <strong>«Каталог» → «Статьи (Информация)»</strong>.</li>
+                    <li>Найдите нужную статью — например, «Политика конфиденциальности».</li>
+                    <li>Посмотрите на число в первой колонке — это и есть ID (номер). Запишите его.</li>
+                    <li>Используйте этот номер в ссылке: <code>[ваш текст](agree:номер)</code>.</li>
+                </ol>
+
+                <h3 style="color: #333; margin-top: 18px;"><strong>Альтернатива: отдельная кнопка-попап</strong></h3>
+                <p>
+                    Если хотите сделать не текстовую ссылку, а яркую кнопку — используйте блок <strong>«Попап окно»</strong> из левой панели:
+                </p>
+                <ol class="help-steps-list">
+                    <li>Добавьте блок «Попап окно».</li>
+                    <li>Введите текст кнопки (например, «Принять условия»).</li>
+                    <li>Укажите номер статьи (ID).</li>
+                    <li>Выберите стиль: <strong>текстовая ссылка</strong> или <strong>кнопка</strong>.</li>
+                    <li>Если выбрали кнопку — можно выбрать цвет (синий, зелёный, красный) и размер (маленькая, обычная, большая, на всю ширину).</li>
+                </ol>
+
+                <div class="help-example-box">
+                    <strong>Как выглядит кнопка:</strong>
+                    <div style="text-align: center; margin-top: 10px;">
+                        <a class="btn btn-primary agree" href="#" style="color: #fff; text-decoration: none;">Принять условия</a>
+                    </div>
+                    <p style="margin: 8px 0 0; font-size: 12px; color: #888;">При нажатии откроется всплывающее окно с текстом статьи из OpenCart.</p>
+                </div>
+            </div>
+
+            <!-- TAB 5: AI FUNCTIONS -->
+            <div class="help-tab-content" id="help-ai" style="display: none;">
+                <h3 style="margin-top: 0; color: #333;"><i class="fa fa-magic"></i> Совместная работа с искусственным интеллектом</h3>
+                <p>
+                    Конструктор поддерживает <strong>интеграцию с ИИ (ChatGPT, Claude, Gemini)</strong>. Каждый экспортированный проект содержит встроенную схему <code>ai_specification</code>, которая сообщает нейросети технические возможности конструктора и правила генерации блоков для безошибочного импорта.
+                </p>
+
+                <h3 style="color: #333; margin-top: 18px;"><strong>Новый способ: AI Ассистент (Рекомендуется)</strong></h3>
+                <p>
+                    Теперь не обязательно вручную скачивать файлы. Вы можете использовать встроенный промпт-генератор:
+                </p>
+                <ol class="help-steps-list">
+                    <li><strong>Запуск ассистента:</strong> В выпадающем меню **«Импорт / AI»** в шапке конструктора выберите пункт **«Сформировать AI-запрос»** <span class="btn btn-secondary" style="padding:4px 8px; font-size:11px; pointer-events:none; cursor:default; background:#e8ecf1; border-color:transparent; color:#333;"><i class="fa fa-commenting-o" style="color:#5446f8;"></i></span>.</li>
+                    <li><strong>Ввод задачи:</strong> Напишите своими словами, что нужно сделать (например: <em>«Переведи статью на английский язык»</em>, <em>«Добавь в конец блок FAQ с ответами»</em> или <em>«Исправь орфографию во всех блоках»</em>).</li>
+                    <li><strong>Копирование промпта:</strong> Нажмите кнопку <strong>«Скопировать промпт с JSON»</strong>. В буфер обмена будет скопирован готовый запрос для нейросети, содержащий роль, правила безопасности и всю структуру вашей статьи в формате JSON.</li>
+                    <li><strong>Запрос к ИИ:</strong> Вставьте скопированный текст (Ctrl+V) в окно ChatGPT, Claude или Gemini и отправьте.</li>
+                    <li><strong>Вставка результата:</strong> Скопируйте весь ответ нейросети целиком. Вернитесь в конструктор, откройте меню **«Импорт / AI»** и выберите пункт **«Вставить ответ от AI»** <span class="btn btn-secondary" style="padding:4px 8px; font-size:11px; pointer-events:none; cursor:default; background:#e8ecf1; border-color:transparent; color:#333;"><i class="fa fa-check-circle-o" style="color:#2f80ed;"></i></span>. Конструктор автоматически найдет и извлечет JSON-код из текста ответа (даже если ИИ добавил свои рассуждения или оформил код в markdown-блоки).</li>
+                </ol>
+
+                <h3 style="color: #333; margin-top: 18px;"><strong>Классический способ: Импорт/Экспорт файлов</strong></h3>
+                <ol class="help-steps-list">
+                    <li><strong>Экспорт JSON:</strong> В меню **«Скачать / Экспорт»** выберите пункт **«Скачать файл проекта (.json)»** <span class="btn btn-secondary" style="padding:4px 8px; font-size:11px; pointer-events:none; cursor:default; background:#e8ecf1; border-color:transparent; color:#333;"><i class="fa fa-download" style="color:#7f8c8d;"></i></span>, чтобы сохранить текущую структуру статьи в файл <code>.json</code>.</li>
+                    <li><strong>Передача в ИИ:</strong> Загрузите полученный файл в чат с ChatGPT, Claude или Gemini или скопируйте его содержимое.</li>
+                    <li><strong>Промпт (Запрос):</strong> Опишите ИИ задачу на русском языке (ИИ сам прочитает спецификацию внутри файла и создаст корректную структуру JSON).</li>
+                    <li><strong>Импорт JSON:</strong> Сохраните ответ ИИ как <code>.json</code> файл, вернитесь в конструктор, откройте меню **«Импорт / AI»**, выберите пункт **«Импортировать файл (.json, .html)»** <span class="btn btn-secondary" style="padding:4px 8px; font-size:11px; pointer-events:none; cursor:default; background:#e8ecf1; border-color:transparent; color:#333;"><i class="fa fa-upload" style="color:#2980b9;"></i></span> и выберите этот файл.</li>
+                </ol>
+
+                <h3 style="color: #333; margin-top: 18px;"><strong>Спецификация блоков (ai_specification)</strong></h3>
+                <p>Благодаря встроенной спецификации, ИИ точно знает, как собирать следующие блоки:</p>
+                <table class="help-table-guide">
+                    <thead>
+                        <tr>
+                            <th style="width: 25%;">Тип блока (type)</th>
+                            <th style="width: 30%;">Назначение</th>
+                            <th style="width: 45%;">Поля в data (схема)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>heading</code></td>
+                            <td>Заголовки (H1-H6)</td>
+                            <td><code>level</code> (число 1-6), <code>text</code> (текст с поддержкой Markdown)</td>
+                        </tr>
+                        <tr>
+                            <td><code>paragraph</code></td>
+                            <td>Текст абзацев</td>
+                            <td><code>text</code> (поддерживает **жирный**, *курсив*, списки и [ссылки](url))</td>
+                        </tr>
+                        <tr>
+                            <td><code>list</code></td>
+                            <td>Списки</td>
+                            <td><code>ordered</code> (true/false), <code>items</code> (массив строк)</td>
+                        </tr>
+                        <tr>
+                            <td><code>quote</code></td>
+                            <td>Цитаты с автором</td>
+                            <td><code>text</code> (строка), <code>author</code> (строка, опционально)</td>
+                        </tr>
+                        <tr>
+                            <td><code>table</code></td>
+                            <td>Таблицы данных</td>
+                            <td><code>headers</code> (массив заголовков), <code>rows</code> (массив массивов ячеек)</td>
+                        </tr>
+                        <tr>
+                            <td><code>image</code></td>
+                            <td>Изображение</td>
+                            <td><code>path</code> (путь к файлу на сервере), <code>caption</code> (подпись)</td>
+                        </tr>
+                        <tr>
+                            <td><code>before-after</code></td>
+                            <td>Слайдер До/После</td>
+                            <td><code>beforeImg</code>, <code>afterImg</code> (пути), <code>beforeLabel</code>, <code>afterLabel</code> (подписи)</td>
+                        </tr>
+                        <tr>
+                            <td><code>spoiler</code></td>
+                            <td>Сворачиваемый FAQ</td>
+                            <td><code>title</code> (вопрос), <code>text</code> (ответ), <code>opened</code> (true/false)</td>
+                        </tr>
+                        <tr>
+                            <td><code>tabs</code></td>
+                            <td>Вкладки (Табы)</td>
+                            <td><code>tabs</code> (массив объектов с <code>title</code> и <code>content</code>)</td>
+                        </tr>
+                        <tr>
+                            <td><code>product-card</code></td>
+                            <td>Карточка товара</td>
+                            <td><code>url</code>, <code>image</code>, <code>name</code>, <code>price</code>, <code>buttonText</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>grid</code></td>
+                            <td>Сетка (Bootstrap 3)</td>
+                            <td><code>pcPattern</code> (пропорции, сумма = 12), <code>columns</code> (массив колонок с nested blocks)</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3 style="color: #333; margin-top: 18px;"><strong>Важные правила при работе с ИИ</strong></h3>
+                <div class="help-example-box" style="background: #f0fdf4; border-color: #bbf7d0; color: #166534;">
+                    <ul style="margin: 0; padding-left: 20px;">
+                        <li><strong>Автоматические ID:</strong> Нейросети <strong>не нужно</strong> генерировать новые UUID или следить за уникальностью ключей <code>id</code>. При импорте конструктор сам создаст валидные и уникальные ID для всех блоков и колонок.</li>
+                        <li><strong>Использование Markdown:</strong> Внутри полей <code>text</code> (для параграфов, цитат, спойлеров и вкладок) ИИ может смело использовать форматирование Markdown: жирный текст, курсив, списки и гиперссылки. Конструктор автоматически преобразует их в HTML.</li>
+                        <li><strong>Сложные структуры (Grid):</strong> ИИ умеет вкладывать одни блоки внутрь других в блоке <code>grid</code>. Спецификация показывает ему, как объявлять дочерние элементы в массиве <code>columns[i].blocks</code>.</li>
+                    </ul>
+                </div>
+
+                <h3 style="color: #4a90d9; margin-top: 24px;"><i class="fa fa-copy"></i> Готовые промпты для ChatGPT / Claude / Gemini</h3>
+                <p>Скопируйте один из этих промптов и отправьте его ИИ вместе со своим файлом JSON:</p>
+
+                <!-- PROMPT 1 -->
+                <div class="help-example-box" style="margin-top: 12px;">
+                    <div style="font-weight: 700; margin-bottom: 6px; color: #3b82f6;"><i class="fa fa-language"></i> Вариант 1: Перевод статьи на другой язык</div>
+                    <textarea readonly onclick="this.select();" class="prompt-textarea" style="width:100%; height:90px; font-family:inherit; font-size:12px; border:1px solid #cbd5e1; border-radius:4px; padding:6px; resize:none; background:#fafafa; color:#333;">Изучи структуру приложенного файла JSON. Не меняя схему данных, переведи весь контент на английский язык. Изменяй только текстовые значения в полях title, slug и в массиве blocks (поля text, title, headers, rows, items, name и т.д.). Верни строго валидный JSON-код статьи.</textarea>
+                    <div style="font-size: 11px; color: #666; margin-top: 4px;">Кликните в поле, чтобы выделить весь текст для копирования.</div>
+                </div>
+
+                <!-- PROMPT 2 -->
+                <div class="help-example-box" style="margin-top: 12px;">
+                    <div style="font-weight: 700; margin-bottom: 6px; color: #10b981;"><i class="fa fa-question-circle"></i> Вариант 2: Генерация блока Частых Вопросов (FAQ)</div>
+                    <textarea readonly onclick="this.select();" class="prompt-textarea" style="width:100%; height:110px; font-family:inherit; font-size:12px; border:1px solid #cbd5e1; border-radius:4px; padding:6px; resize:none; background:#fafafa; color:#333;">Проанализируй текст этой статьи в файле JSON. Напиши 4 релевантных вопроса и подробных ответа к ней. Сгенерируй их в виде новых блоков типа "spoiler" (аккордеонов) и добавь их в конец массива "blocks". Поле "opened" для всех спойлеров сделай false. Верни измененный JSON-код статьи.</textarea>
+                    <div style="font-size: 11px; color: #666; margin-top: 4px;">Кликните в поле, чтобы выделить весь текст для копирования.</div>
+                </div>
+
+                <!-- PROMPT 3 -->
+                <div class="help-example-box" style="margin-top: 12px;">
+                    <div style="font-weight: 700; margin-bottom: 6px; color: #f59e0b;"><i class="fa fa-line-chart"></i> Вариант 3: SEO оптимизация и расширение статьи</div>
+                    <textarea readonly onclick="this.select();" class="prompt-textarea" style="width:100%; height:130px; font-family:inherit; font-size:12px; border:1px solid #cbd5e1; border-radius:4px; padding:6px; resize:none; background:#fafafa; color:#333;">Выступи в роли экспертного копирайтера и SEO-специалиста. Прочитай статью в JSON. Оптимизируй заголовки и тексты блоков под ключевой запрос [КУПИТЬ УМНЫЕ ЧАСЫ]. Расширь абзацы полезными деталями, добавь 1-2 блока привлекательных цитат (quote), а также блок сравнения характеристик в виде таблицы (table). Верни обновленный JSON-код статьи.</textarea>
+                    <div style="font-size: 11px; color: #666; margin-top: 4px;">Кликните в поле, чтобы выделить весь текст для копирования.</div>
+                </div>
+
+                <!-- PROMPT 4 -->
+                <div class="help-example-box" style="margin-top: 12px; margin-bottom: 12px;">
+                    <div style="font-weight: 700; margin-bottom: 6px; color: #ec4899;"><i class="fa fa-shopping-cart"></i> Вариант 4: Добавление товарных рекомендаций</div>
+                    <textarea readonly onclick="this.select();" class="prompt-textarea" style="width:100%; height:110px; font-family:inherit; font-size:12px; border:1px solid #cbd5e1; border-radius:4px; padding:6px; resize:none; background:#fafafa; color:#333;">Добавь в конец этой статьи блок сетки (grid) с двумя колонками (pcPattern: [6, 6]). Внутри каждой колонки создай по одному блоку товара (product-card). Подбери подходящие по смыслу товары, заполни для них поля url, image, name, price и buttonText. Верни готовый JSON.</textarea>
+                    <div style="font-size: 11px; color: #666; margin-top: 4px;">Кликните в поле, чтобы выделить весь текст для копирования.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- DONATE MODAL -->
+<div id="donateModal" class="modal-overlay" style="display: none;">
+    <div class="modal-window donate-modal-window">
+        <div class="modal-header">
+            <h2>Поддержать проект (Отблагодарить)</h2>
+            <button class="modal-close" id="btnCloseDonate">&times;</button>
+        </div>
+        <div class="modal-body donate-modal-body">
+            <div class="donate-intro">
+                <div class="donate-icon-wrapper">
+                    <i class="fa fa-heart donate-heart-pulse"></i>
+                </div>
+                <p class="donate-text">
+                    Большое спасибо за использование <strong>Content Constructor</strong>! Если этот инструмент сэкономил ваше время и помог в работе, вы можете поддержать автора. Это мотивирует развивать проект и добавлять новые функции!
+                </p>
+            </div>
+            
+            <div class="payment-methods">
+                <!-- Method 1: Yoomoney Card -->
+                <div class="payment-card">
+                    <div class="payment-card-icon card-color-yoomoney">
+                        <i class="fa fa-credit-card"></i>
+                    </div>
+                    <div class="payment-card-details">
+                        <span class="payment-label">ЮMoney карта</span>
+                        <div class="payment-value-container">
+                            <span class="payment-value" id="valYoomoneyCard">5599 0021 3241 5086</span>
+                            <button class="btn-copy-payment" data-copy-target="valYoomoneyCard" title="Копировать номер карты">
+                                <i class="fa fa-clone"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Method 2: Yoomoney Wallet -->
+                <div class="payment-card">
+                    <div class="payment-card-icon card-color-yoomoney-wallet">
+                        <i class="fa fa-money"></i>
+                    </div>
+                    <div class="payment-card-details">
+                        <span class="payment-label">ЮMoney кошелек</span>
+                        <div class="payment-value-container">
+                            <span class="payment-value" id="valYoomoneyWallet">4100112176183832</span>
+                            <button class="btn-copy-payment" data-copy-target="valYoomoneyWallet" title="Копировать номер кошелька">
+                                <i class="fa fa-clone"></i>
+                            </button>
+                        </div>
+                        <a href="https://yoomoney.ru/to/4100112176183832" target="_blank" class="payment-action-link">
+                            <i class="fa fa-external-link"></i> Перейти к переводу на ЮMoney
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Method 3: PayPal -->
+                <div class="payment-card">
+                    <div class="payment-card-icon card-color-paypal">
+                        <i class="fa fa-paypal"></i>
+                    </div>
+                    <div class="payment-card-details">
+                        <span class="payment-label">PayPal</span>
+                        <div class="payment-value-container">
+                            <span class="payment-value" id="valPaypal">tomopencart@gmail.com</span>
+                            <button class="btn-copy-payment" data-copy-target="valPaypal" title="Копировать email PayPal">
+                                <i class="fa fa-clone"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="donate-footer-note">
+                <i class="fa fa-info-circle"></i> Нажмите на кнопку копирования рядом с реквизитами для сохранения в буфер обмена.
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- AI ASSISTANT MODAL -->
+<div id="aiAssistantModal" class="modal-overlay" style="display: none;">
+    <div class="modal-window" style="max-width: 500px;">
+        <div class="modal-header">
+            <h2><i class="fa fa-magic"></i> AI Ассистент (промпт-генератор)</h2>
+            <button class="modal-close" id="btnCloseAiAssistant">&times;</button>
+        </div>
+        <div class="modal-body" style="padding-top: 15px;">
+            <p style="font-size: 13px; color: #555; margin-bottom: 12px; line-height: 1.5;">
+                Напишите своими словами, что нужно сделать с содержанием всей страницы (например: <i>«Переведи на английский язык»</i>, <i>«Исправь ошибки в тексте»</i>, <i>«Добавь 3 преимущества товара»</i> или <i>«Сделай текст более профессиональным»</i>).
+            </p>
+            <div class="form-group" style="margin-bottom: 15px;">
+                <textarea id="aiInstructionInput" rows="4" placeholder="Введите инструкцию для AI..." style="width: 100%; box-sizing: border-box; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-family: sans-serif; resize: vertical;"></textarea>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button id="btnCancelAiAssistant" class="btn btn-secondary">Отмена</button>
+                <button id="btnCopyAiPrompt" class="btn btn-primary" style="background: #5446f8; border-color: #4338ca;">
+                    <i class="fa fa-copy"></i> Скопировать промпт с JSON
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Start Screen Overlay -->
+<div id="startScreen" class="start-screen-overlay" style="display: none;">
+    <div class="start-screen-card">
+        <div class="start-screen-header">
+            <i class="fa fa-magic start-screen-icon"></i>
+            <h2>Новый проект</h2>
+            <p>Настройте параметры перед началом работы</p>
+        </div>
+        <!-- Article title -->
+        <div class="start-field-group start-field-title">
+            <label for="startTitle">Название статьи</label>
+            <input type="text" id="startTitle" class="start-input" placeholder="Например: Обзор Apple Watch Series 9">
+        </div>
+        <!-- Site URL -->
+        <div class="start-field-group start-field-url">
+            <label for="startSiteUrl">Адрес сайта</label>
+            <div class="start-url-row">
+                <input type="url" id="startSiteUrl" class="start-input" placeholder="https://example.ru/">
+                <label class="start-remember-label">
+                    <input type="checkbox" id="startRememberUrl" checked> Запомнить
+                </label>
+            </div>
+        </div>
+        <!-- Theme selection -->
+        <div class="start-field-group start-field-theme">
+            <label>Цветовая тема</label>
+            <div class="start-theme-cards" id="startThemeCards">
+                <!-- rendered by JS -->
+            </div>
+        </div>
+        <!-- Actions -->
+        <div class="start-actions">
+            <button id="btnStartProject" class="btn btn-primary start-btn-primary">
+                <i class="fa fa-rocket"></i> Начать создание
+            </button>
+            <button id="btnSkipStart" class="start-btn-skip">Пропустить</button>
+        </div>
+    </div>
+</div>
+  </div>
+
+  <div data-include="components/footer.html"></div>
+
+  <script src="js/main.js"></script>
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="content-constructor/js/app.js?v=1.6.7"></script>
+</body>
+</html>
