@@ -28,9 +28,17 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-mono/style.css">
     <link rel="stylesheet" href="css/style.css">
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <style>
+        .checker-page .page-header { padding: 32px 0 16px; }
+        .checker-page .section { padding: 16px 0 40px; }
+        @media (max-width: 560px) {
+            .checker-page .page-header { padding: 24px 0 12px; }
+            .checker-page .section { padding: 12px 0 32px; }
+        }
+    </style>
 </head>
 
-<body class="compact-page">
+<body class="compact-page checker-page">
     <div data-include="components/header.html"></div>
 
     <section class="page-header">
