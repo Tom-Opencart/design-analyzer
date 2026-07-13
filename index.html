@@ -261,65 +261,6 @@
             cursor: not-allowed; 
         }
 
-        /* Deep-render toggle — Tom Modern in-system control */
-        .deep-render-toggle {
-            display: flex;
-            align-items: flex-start;
-            gap: 0.6rem;
-            margin-top: 0.85rem;
-            cursor: pointer;
-            user-select: none;
-            font-family: var(--font-mono);
-            font-size: 0.72rem;
-            line-height: 1.5;
-            color: var(--text-secondary);
-            letter-spacing: 0.02em;
-        }
-        .deep-render-toggle input {
-            position: absolute;
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-        .deep-render-toggle .drt-box {
-            flex: none;
-            width: 16px;
-            height: 16px;
-            margin-top: 1px;
-            border: 2px solid var(--border-color);
-            background: var(--surface-color);
-            position: relative;
-            transition: background 0.15s ease, border-color 0.15s ease;
-        }
-        .deep-render-toggle input:checked + .drt-box {
-            background: var(--accent-color);
-            border-color: var(--accent-color);
-        }
-        .deep-render-toggle input:checked + .drt-box::after {
-            content: '';
-            position: absolute;
-            left: 4px;
-            top: 0;
-            width: 4px;
-            height: 9px;
-            border: solid #ffffff;
-            border-width: 0 2px 2px 0;
-            transform: rotate(45deg);
-        }
-        .deep-render-toggle input:focus-visible + .drt-box {
-            outline: 2px solid var(--accent-color);
-            outline-offset: 2px;
-        }
-        .deep-render-toggle:hover .drt-box {
-            border-color: var(--accent-color);
-        }
-        .deep-render-toggle .drt-text strong {
-            color: var(--text-primary);
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
-        }
-
         /* Compact Bento Grid (Row layout to save height) */
         .features-grid {
             display: grid;
@@ -724,12 +665,6 @@
                     </button>
                 </div>
 
-                <label class="deep-render-toggle">
-                    <input type="checkbox" id="deepRender">
-                    <span class="drt-box" aria-hidden="true"></span>
-                    <span class="drt-text"><strong>Deep render</strong> — для JS-сайтов (Vue / React / Angular): выполняет скрипты страницы и читает реальные вычисленные стили. Медленнее.</span>
-                </label>
-
                 <!-- Compact Bento grid of features -->
                 <div class="features-grid">
                     <div class="feature-card">
@@ -882,7 +817,8 @@ async function fetchWithProxies(targetUrl) {
 
 // Deep render: run the target's JS inside a same-origin <iframe srcdoc> and read real computed
 // styles. Returns { doc, textData } synthesised from getComputedStyle, or null on failure.
-async function renderAndHarvest(targetUrl, shellHtml) {
+async function renderAndHarvest(targetUrl, shellHtml, settleMs) {
+    settleMs = settleMs || 1500;
     let html = shellHtml.replace(/<meta[^>]+http-equiv=["']?content-security-policy["']?[^>]*>/gi, '');
     const baseTag = '<base href="' + targetUrl + '">';
     if (/<head[^>]*>/i.test(html)) html = html.replace(/<head([^>]*)>/i, '<head$1>' + baseTag);
@@ -978,7 +914,7 @@ async function renderAndHarvest(targetUrl, shellHtml) {
                 observer = new MutationObserver(() => { clearTimeout(quietTimer); quietTimer = setTimeout(harvest, 700); });
                 observer.observe(idoc.body || idoc.documentElement, { childList: true, subtree: true, attributes: true });
             } catch (e) {}
-            quietTimer = setTimeout(harvest, 1500);
+            quietTimer = setTimeout(harvest, settleMs);
         });
         hardTimer = setTimeout(harvest, 9000);
         try { iframe.srcdoc = html; } catch (e) { return finish(null); }
@@ -1009,12 +945,20 @@ analyzeBtn.addEventListener('click', async () => {
     
     try {
         const html = await fetchWithProxies(url);
-        const deep = !!(document.getElementById('deepRender') && document.getElementById('deepRender').checked);
+        // Render-first (automatic): execute the page in a sandboxed iframe and read REAL computed
+        // styles. Works for both server-rendered and JS-rendered (SPA) sites — no user toggle.
+        // Static regex parse is only the fallback if the frame can't hydrate (hard CSP / CORS).
+        const looksSpa = (() => {
+            try {
+                const d = new DOMParser().parseFromString(html, 'text/html');
+                const bodyEls = d.body ? d.body.querySelectorAll('*').length : 0;
+                const fw = /chunk-vendors|runtime~|webpackjsonp|window\.__nuxt__|__next_data__|data-reactroot|ng-version|vue(?:\.runtime)?(?:\.min)?\.js|react-dom|_next\/static|_nuxt\//i.test(html);
+                return bodyEls < 12 || fw;
+            } catch (e) { return true; }
+        })();
+        try { loaderText.innerText = looksSpa ? 'Рендеринг страницы (выполнение JS)...' : 'Чтение вычисленных стилей...'; } catch (e) {}
         let rendered = null;
-        if (deep) {
-            try { loaderText.innerText = 'Рендеринг страницы (выполнение JS)...'; } catch (e) {}
-            try { rendered = await renderAndHarvest(url, html); } catch (e) { rendered = null; }
-        }
+        try { rendered = await renderAndHarvest(url, html, looksSpa ? 1600 : 500); } catch (e) { rendered = null; }
         if (rendered) {
             currentMarkdown = analyzeData(url, rendered.doc, rendered.textData, { rendered: true });
         } else {
@@ -1030,7 +974,7 @@ analyzeBtn.addEventListener('click', async () => {
                 } catch (e) {}
             }
             const inlineStyles = Array.from(doc.querySelectorAll('style')).map(s => s.textContent).join('\n');
-            currentMarkdown = analyzeData(url, doc, html + "\n" + cssText + "\n" + inlineStyles);
+            currentMarkdown = analyzeData(url, doc, html + "\n" + cssText + "\n" + inlineStyles, { deepFailed: true });
         }
     } catch (error) { 
         currentMarkdown = generateFallbackMarkdown(url, error.message); 
@@ -1407,18 +1351,24 @@ function analyzeData(url, doc, textData, opts) {
         const isSpa = (bodyEls < 8 && (mount || frameworkBundle)) || bodyEls < 4 || (cssHeavyDomEmpty && maxReach <= 4);
         if (opts.rendered) {
             spaWarning = '> ✅ **Rendered in-browser.** The page\u2019s JavaScript was executed and tokens below were read from real computed styles (`getComputedStyle`), not static CSS text.\n\n';
-        } else if (isSpa) {
-            spaWarning =
-                '> ⚠️ **Client-rendered site detected — results are UNRELIABLE.**\n' +
-                '>\n' +
-                '> The fetched HTML is a near-empty shell (' + bodyEls + ' body element' + (bodyEls === 1 ? '' : 's') + '' +
-                (frameworkBundle ? ', framework bundle present' : '') + (mount ? ', JS mount point found' : '') + '). ' +
-                'This page builds its real DOM and applies its theme colours with JavaScript in the browser, so a ' +
-                'static fetch cannot see them. Colours/typography below are extracted only from whatever static CSS ' +
-                'shipped — they may miss the actual brand palette entirely.\n' +
-                '>\n' +
-                '> **To analyse this site correctly, capture a rendered snapshot** (headless browser + `getComputedStyle`) ' +
-                'and feed that HTML instead.\n\n';
+        } else {
+            const deepNote = opts.deepFailed
+                ? '> ⚠️ **Deep render didn\u2019t hydrate.** The page\u2019s app failed to build its DOM inside the sandbox (its scripts or cross-origin data were blocked), so this fell back to STATIC analysis below.\n>\n'
+                : '';
+            if (isSpa) {
+                spaWarning = deepNote +
+                    '> ⚠️ **Client-rendered site detected — results are UNRELIABLE.**\n' +
+                    '>\n' +
+                    '> The fetched HTML is a near-empty shell (' + bodyEls + ' body element' + (bodyEls === 1 ? '' : 's') + '' +
+                    (frameworkBundle ? ', framework bundle present' : '') + (mount ? ', JS mount point found' : '') + '). ' +
+                    'This page builds its real DOM and applies its theme colours with JavaScript in the browser, so a ' +
+                    'static fetch cannot see them. Colours/typography below are extracted only from whatever static CSS ' +
+                    'shipped — they may miss the actual brand palette entirely.\n' +
+                    '>\n' +
+                    '> **To analyse this site correctly, tick \u201CDeep render\u201D above** (or capture a headless `getComputedStyle` snapshot).\n\n';
+            } else if (opts.deepFailed) {
+                spaWarning = '> ⚠️ **Deep render didn\u2019t hydrate** — fell back to static analysis. Tokens below may be incomplete.\n\n';
+            }
         }
     } catch (e) {}
 
