@@ -2374,15 +2374,6 @@ function analyzeData(url, doc, textData, opts) {
         md += '| `{rounded.' + r.token + '}` | ' + r.px + 'px | ' + use + ' |\n';
     });
     md += '\n';
-    md += '### Photography Geometry\n\n';
-    if (imgs.length > 0) {
-        md += 'Product photography uses ' + (topRadii.find(([px]) => px >= 8) ? '`{rounded.' + cardRoundedToken + '}` frames' : 'sharp rectangular frames') + ' at every breakpoint. ';
-        md += 'Hero photography fills ' + (topWidths.length > 0 ? 'the full content width (~' + topWidths[0][0] + 'px)' : 'the full viewport width') + '. ';
-        md += 'Thumbnail grids use 1:1 square crops; hero and feature images use 16:9 or 21:9 widescreen ratios.\n\n';
-    } else {
-        md += 'Photography frames use `' + (topRadii.length > 0 ? '{rounded.' + radiusToken(topRadii[0][0]) + '}' : '{rounded.none}') + '` rounding. ';
-        md += 'No circular avatar masks detected — all image containers use rectilinear or softly-rounded geometry.\n\n';
-    }
 
     // -- Components --
     md += '## Components\n\n';
@@ -2502,65 +2493,8 @@ function analyzeData(url, doc, textData, opts) {
         }
     }
 
-    // -- Do's and Don'ts --
-    md += "## Do's and Don'ts\n\n";
-    md += '### Do\n';
-    md += '- Use `{colors.' + (primaryHex ? 'primary' : 'canvas') + '}` for primary CTAs, links, and interactive highlights — keep it reserved\n';
-    md += '- Set display headlines in `' + (mainFont || 'system font') + '` at weight ' + (allWeights.length > 0 ? allWeights[allWeights.length - 1] : 700) + ' with tight line-height\n';
-    md += '- Keep body copy at weight ' + (allWeights.length > 0 ? allWeights[0] : 400) + ' — the contrast between heavy display and light body is the typographic signature\n';
-    if (topRadii.length > 0 && topRadii[0][0] > 0) md += '- Use `{rounded.' + radiusToken(topRadii[0][0]) + '}` for cards and containers; keep buttons at `{rounded.' + radiusToken(Math.min(topRadii[0][0], 6)) + '}` or sharper\n';
-    else md += '- Use `{rounded.none}` (0px) by default — the sharp rectangular silhouette IS the brand\n';
-    md += '- Align spacing to `{spacing.section}` between major bands for grid-aligned vertical rhythm\n';
-    md += '- Frame product photography inside `{rounded.' + cardRoundedToken + '}` containers; never use full-bleed circular masks\n';
-    md += '- Use `{typography.button}` for all button labels — uppercase with letter-spacing for that "machined" feel\n';
-    md += '- Pair white `{colors.canvas}` body bands with `{colors.surface-card}` alternating bands; let the surface contrast do the breathing\n';
-    md += '\n### Don\'t\n';
-    md += '- Don\'t introduce accent colors outside the detected palette — the system is closed by design\n';
-    if (allWeights.length > 0 && allWeights[0] < 400) md += '- Don\'t bold body type — body stays at weight ' + allWeights[0] + '\n';
-    md += '- Don\'t add soft drop-shadows or atmospheric gradients where the brand uses hard borders and flat fills\n';
-    md += '- Don\'t round buttons above `{rounded.' + radiusToken(topRadii.length > 0 ? Math.min(topRadii[0][0], 6) : 4) + '}` — a soft button reads as a different brand\n';
-    md += '- Don\'t drop ink text opacity to create hierarchy — switch surface or shift to `{colors.muted}` instead\n';
-    md += '- Don\'t use decorative elements as inline noise; reserve them for hero bands and full-page banners\n';
-    md += '\n';
-
-    // -- Responsive --
-    md += '## Responsive Behavior\n\n';
-    md += '### Breakpoints\n| Name | Width | Key Changes |\n|---|---|---|\n';
-    if (bps.length >= 3) {
-        md += '| Mobile | < ' + bps[0] + 'px | Single column, hamburger nav |\n';
-        md += '| Tablet | ' + bps[0] + '–' + bps[1] + 'px | 2-3 column grid |\n';
-        md += '| Desktop | > ' + bps[1] + 'px | Full layout, max-width ' + (topWidths[0] ? topWidths[0][0] : '1440px') + ' |\n';
-    } else {
-        md += '| Mobile | < 768px | Single column, hamburger menu |\n';
-        md += '| Tablet | 768–1024px | 2-3 column grid |\n';
-        md += '| Desktop | > 1024px | Full layout, max-width ' + (topWidths[0] ? topWidths[0][0] : '1440px') + ' |\n';
-    }
-    md += '\n### Touch Targets\n44×44px minimum.\n';
-    md += '\n### Collapsing Strategy\n';
-    if (navEl) md += '- **Top nav**: collapses to hamburger below ' + (bps[0] || '768') + 'px\n';
-    if (forms.length > 0) md += '- **Forms**: single-column stack on mobile\n';
-    if (imgs.length > 0) md += '- **Images**: responsive scaling with aspect ratio preservation\n';
-    if (sliders.length > 0) md += '- **Carousels**: touch-swipe on mobile, arrows on desktop\n';
-    md += '- **Grid**: columns reduce across breakpoints\n';
-    md += '- **Typography**: type scale compresses at mobile breakpoints\n';
-    md += '\n### Image Behavior\n';
-    if (imgs.length > 0) {
-        md += '- Hero photography uses ' + (topRadii.length > 0 ? '`{rounded.' + radiusToken(topRadii[0][0]) + '}` frames' : 'sharp rectangular frames') + ' at every breakpoint\n';
-        md += '- Product thumbnails maintain 1:1 aspect ratio\n';
-        md += '- Lifestyle and feature photography uses 16:9 widescreen with horizontal cropping on mobile\n';
-    } else {
-        md += '- No product photography detected on the analyzed page\n';
-    }
-    md += '\n';
-
-    // -- Iteration Guide --
-    md += '## Iteration Guide\n\n';
-    md += '1. Focus on **ONE component** at a time — reference its YAML key (`{component.' + (btns.length > 0 ? 'button-primary' : 'text-input') + '}`)\n';
-    md += '2. Use **token references** everywhere (`{colors.primary}`, `{typography.display-xl}`, `{rounded.xl}`) — never inline hex\n';
-    md += '3. New components default to `{rounded.' + (topRadii.length > 0 ? radiusToken(topRadii[0][0]) : 'none') + '}` — only deviate for circular icons\n';
-    md += '4. Add new variants as separate component entries (`-pressed`, `-disabled`) — never bury state inside prose\n';
-    md += '5. Keep `{colors.primary}` scarce — at most two accent elements per viewport\n';
-    md += '\n';
+    // -- Do's / Don'ts, Photography Geometry, Responsive, Iteration Guide removed:
+    //    they were hardcoded prescriptive filler, not measured from the analysed page. --
 
     // -- Known Gaps --
     md += '## Known Gaps\n\n';
