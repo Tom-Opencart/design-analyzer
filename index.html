@@ -261,6 +261,65 @@
             cursor: not-allowed; 
         }
 
+        /* Deep-render toggle — Tom Modern in-system control */
+        .deep-render-toggle {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.6rem;
+            margin-top: 0.85rem;
+            cursor: pointer;
+            user-select: none;
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            line-height: 1.5;
+            color: var(--text-secondary);
+            letter-spacing: 0.02em;
+        }
+        .deep-render-toggle input {
+            position: absolute;
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .deep-render-toggle .drt-box {
+            flex: none;
+            width: 16px;
+            height: 16px;
+            margin-top: 1px;
+            border: 2px solid var(--border-color);
+            background: var(--surface-color);
+            position: relative;
+            transition: background 0.15s ease, border-color 0.15s ease;
+        }
+        .deep-render-toggle input:checked + .drt-box {
+            background: var(--accent-color);
+            border-color: var(--accent-color);
+        }
+        .deep-render-toggle input:checked + .drt-box::after {
+            content: '';
+            position: absolute;
+            left: 4px;
+            top: 0;
+            width: 4px;
+            height: 9px;
+            border: solid #ffffff;
+            border-width: 0 2px 2px 0;
+            transform: rotate(45deg);
+        }
+        .deep-render-toggle input:focus-visible + .drt-box {
+            outline: 2px solid var(--accent-color);
+            outline-offset: 2px;
+        }
+        .deep-render-toggle:hover .drt-box {
+            border-color: var(--accent-color);
+        }
+        .deep-render-toggle .drt-text strong {
+            color: var(--text-primary);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
         /* Compact Bento Grid (Row layout to save height) */
         .features-grid {
             display: grid;
@@ -665,6 +724,12 @@
                     </button>
                 </div>
 
+                <label class="deep-render-toggle">
+                    <input type="checkbox" id="deepRender">
+                    <span class="drt-box" aria-hidden="true"></span>
+                    <span class="drt-text"><strong>Deep render</strong> — для JS-сайтов (Vue / React / Angular): выполняет скрипты страницы и читает реальные вычисленные стили. Медленнее.</span>
+                </label>
+
                 <!-- Compact Bento grid of features -->
                 <div class="features-grid">
                     <div class="feature-card">
@@ -815,6 +880,112 @@ async function fetchWithProxies(targetUrl) {
     throw new Error('All proxies failed');
 }
 
+// Deep render: run the target's JS inside a same-origin <iframe srcdoc> and read real computed
+// styles. Returns { doc, textData } synthesised from getComputedStyle, or null on failure.
+async function renderAndHarvest(targetUrl, shellHtml) {
+    let html = shellHtml.replace(/<meta[^>]+http-equiv=["']?content-security-policy["']?[^>]*>/gi, '');
+    const baseTag = '<base href="' + targetUrl + '">';
+    if (/<head[^>]*>/i.test(html)) html = html.replace(/<head([^>]*)>/i, '<head$1>' + baseTag);
+    else html = baseTag + html;
+
+    return await new Promise((resolve) => {
+        const iframe = document.createElement('iframe');
+        iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin');
+        iframe.setAttribute('referrerpolicy', 'no-referrer');
+        iframe.style.cssText = 'position:absolute;left:-99999px;top:0;width:1366px;height:2200px;border:0;visibility:hidden;';
+        let done = false, hardTimer = null, quietTimer = null, observer = null;
+        function finish(result) {
+            if (done) return; done = true;
+            try { if (observer) observer.disconnect(); } catch (e) {}
+            clearTimeout(hardTimer); clearTimeout(quietTimer);
+            try { iframe.remove(); } catch (e) {}
+            resolve(result);
+        }
+        function harvest() {
+            try {
+                const win = iframe.contentWindow, idoc = iframe.contentDocument;
+                if (!idoc || !idoc.body) return finish(null);
+                const els = Array.from(idoc.body.querySelectorAll('*'));
+                if (els.length < 3) return finish(null);
+                const clean = (c) => (c && c !== 'rgba(0, 0, 0, 0)' && c !== 'transparent') ? c : null;
+                const bgArea = {}, txtArea = {}, brdArea = {};
+                const perRules = [];
+                let n = 0; const MAXEL = 1600;
+                for (const el of els) {
+                    if (n >= MAXEL) break;
+                    let rect; try { rect = el.getBoundingClientRect(); } catch (e) { continue; }
+                    const area = Math.max(0, rect.width) * Math.max(0, rect.height);
+                    if (area < 4) continue;
+                    const cs = win.getComputedStyle(el);
+                    if (cs.display === 'none' || cs.visibility === 'hidden' || parseFloat(cs.opacity) === 0) continue;
+                    const bg = clean(cs.backgroundColor); if (bg) bgArea[bg] = (bgArea[bg] || 0) + area;
+                    const hasText = Array.from(el.childNodes).some(nd => nd.nodeType === 3 && nd.textContent.trim());
+                    if (hasText) { const col = clean(cs.color); if (col) txtArea[col] = (txtArea[col] || 0) + area; }
+                    const bw = parseFloat(cs.borderTopWidth) || 0;
+                    if (bw > 0) { const bc = clean(cs.borderTopColor); if (bc) brdArea[bc] = (brdArea[bc] || 0) + Math.max(rect.width, rect.height); }
+                    const cls = 'ochv' + n; el.classList.add(cls);
+                    const d = ['font-family:' + cs.fontFamily, 'font-size:' + cs.fontSize, 'font-weight:' + cs.fontWeight];
+                    const fs = parseFloat(cs.fontSize) || 16;
+                    if (cs.lineHeight && cs.lineHeight !== 'normal') d.push('line-height:' + (parseFloat(cs.lineHeight) / fs).toFixed(2));
+                    if (cs.borderTopLeftRadius && cs.borderTopLeftRadius !== '0px') d.push('border-radius:' + cs.borderTopLeftRadius);
+                    if (cs.boxShadow && cs.boxShadow !== 'none') d.push('box-shadow:' + cs.boxShadow);
+                    if (cs.paddingTop && cs.paddingTop !== '0px') d.push('padding:' + cs.paddingTop + ' ' + cs.paddingLeft);
+                    perRules.push('.' + cls + '{' + d.join(';') + '}');
+                    n++;
+                }
+                if (n < 3) return finish(null);
+                const anchor = [];
+                function anchorRule(sel, el, props) {
+                    if (!el) return;
+                    const cs = win.getComputedStyle(el); const parts = [];
+                    props.forEach(p => {
+                        if (p === 'background') { const c = clean(cs.backgroundColor); if (c) parts.push('background-color:' + c); }
+                        if (p === 'color') { const c = clean(cs.color); if (c) parts.push('color:' + c); }
+                        if (p === 'border') { const bw = parseFloat(cs.borderTopWidth) || 0; const c = clean(cs.borderTopColor); if (bw > 0 && c) parts.push('border:1px solid ' + c); }
+                    });
+                    if (parts.length) anchor.push(sel + '{' + parts.join(';') + '}');
+                }
+                anchorRule('body', idoc.body, ['background', 'color']);
+                anchorRule('a', idoc.querySelector('a'), ['color']);
+                ['h1', 'h2', 'h3'].forEach(h => anchorRule(h, idoc.querySelector(h), ['color']));
+                anchorRule('button', idoc.querySelector('button,[class*=btn],[class*=button]'), ['background', 'color']);
+                anchorRule('input', idoc.querySelector('input,textarea,select'), ['background', 'border', 'color']);
+                function markers(map, budget, prop, prefix) {
+                    const total = Object.values(map).reduce((a, b) => a + b, 0);
+                    if (total <= 0) return { css: '', html: '' };
+                    let css = '', html = '', k = 0;
+                    Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 12).forEach(([color, area]) => {
+                        const count = Math.max(1, Math.round(area / total * budget));
+                        const c = prefix + (k++);
+                        css += '.' + c + '{' + prop + ':' + color + '}';
+                        html += ('<i class="' + c + '"></i>').repeat(count);
+                    });
+                    return { css, html };
+                }
+                const mbg = markers(bgArea, 600, 'background-color', 'ocmb');
+                const mtx = markers(txtArea, 300, 'color', 'ocmt');
+                const mbd = markers(brdArea, 120, 'border', 'ocmd');
+                const renderedHtml = idoc.documentElement.outerHTML;
+                const style = '<style>' + anchor.join('\n') + '\n' + perRules.join('\n') + '\n' + mbg.css + mtx.css + mbd.css + '</style>';
+                const markerHtml = '<div style="display:none">' + mbg.html + mtx.html + mbd.html + '</div>';
+                const outDoc = new DOMParser().parseFromString(renderedHtml + markerHtml + style, 'text/html');
+                finish({ doc: outDoc, textData: renderedHtml + '\n' + style + '\n' + markerHtml });
+            } catch (e) { finish(null); }
+        }
+        iframe.addEventListener('load', () => {
+            try {
+                const idoc = iframe.contentDocument;
+                observer = new MutationObserver(() => { clearTimeout(quietTimer); quietTimer = setTimeout(harvest, 700); });
+                observer.observe(idoc.body || idoc.documentElement, { childList: true, subtree: true, attributes: true });
+            } catch (e) {}
+            quietTimer = setTimeout(harvest, 1500);
+        });
+        hardTimer = setTimeout(harvest, 9000);
+        try { iframe.srcdoc = html; } catch (e) { return finish(null); }
+        document.body.appendChild(iframe);
+    });
+}
+
 analyzeBtn.addEventListener('click', async () => {
     let url = urlInput.value.trim();
     if (!url) return alert('Введите URL для анализа');
@@ -838,19 +1009,29 @@ analyzeBtn.addEventListener('click', async () => {
     
     try {
         const html = await fetchWithProxies(url);
-        const doc = new DOMParser().parseFromString(html, 'text/html');
-        const stylesheets = Array.from(doc.querySelectorAll('link[rel="stylesheet"]')).slice(0, 5);
-        let cssText = '';
-        for (const link of stylesheets) {
-            let cssUrl = link.getAttribute('href');
-            if (!cssUrl) continue;
-            try { 
-                cssUrl = new URL(cssUrl, url).href; 
-                cssText += '\n' + await fetchWithProxies(cssUrl); 
-            } catch (e) {}
+        const deep = !!(document.getElementById('deepRender') && document.getElementById('deepRender').checked);
+        let rendered = null;
+        if (deep) {
+            try { loaderText.innerText = 'Рендеринг страницы (выполнение JS)...'; } catch (e) {}
+            try { rendered = await renderAndHarvest(url, html); } catch (e) { rendered = null; }
         }
-        const inlineStyles = Array.from(doc.querySelectorAll('style')).map(s => s.textContent).join('\n');
-        currentMarkdown = analyzeData(url, doc, html + "\n" + cssText + "\n" + inlineStyles);
+        if (rendered) {
+            currentMarkdown = analyzeData(url, rendered.doc, rendered.textData, { rendered: true });
+        } else {
+            const doc = new DOMParser().parseFromString(html, 'text/html');
+            const stylesheets = Array.from(doc.querySelectorAll('link[rel="stylesheet"]')).slice(0, 5);
+            let cssText = '';
+            for (const link of stylesheets) {
+                let cssUrl = link.getAttribute('href');
+                if (!cssUrl) continue;
+                try { 
+                    cssUrl = new URL(cssUrl, url).href; 
+                    cssText += '\n' + await fetchWithProxies(cssUrl); 
+                } catch (e) {}
+            }
+            const inlineStyles = Array.from(doc.querySelectorAll('style')).map(s => s.textContent).join('\n');
+            currentMarkdown = analyzeData(url, doc, html + "\n" + cssText + "\n" + inlineStyles);
+        }
     } catch (error) { 
         currentMarkdown = generateFallbackMarkdown(url, error.message); 
     }
@@ -1075,7 +1256,8 @@ function firstColorToken(val, cssVars) {
     return null;
 }
 
-function analyzeData(url, doc, textData) {
+function analyzeData(url, doc, textData, opts) {
+    opts = opts || {};
     const title = doc.querySelector('title')?.textContent?.trim() || new URL(url).hostname;
     currentDomain = new URL(url).hostname.replace(/^www\./, '');
     domainBase = currentDomain.split('.')[0];
@@ -1223,7 +1405,9 @@ function analyzeData(url, doc, textData) {
         const maxReach = finalColors.length ? finalColors[0][1] : 0;
         const cssHeavyDomEmpty = textData.length > 60000 && totalEls < 60; // big CSS bundle, tiny DOM
         const isSpa = (bodyEls < 8 && (mount || frameworkBundle)) || bodyEls < 4 || (cssHeavyDomEmpty && maxReach <= 4);
-        if (isSpa) {
+        if (opts.rendered) {
+            spaWarning = '> ✅ **Rendered in-browser.** The page\u2019s JavaScript was executed and tokens below were read from real computed styles (`getComputedStyle`), not static CSS text.\n\n';
+        } else if (isSpa) {
             spaWarning =
                 '> ⚠️ **Client-rendered site detected — results are UNRELIABLE.**\n' +
                 '>\n' +
