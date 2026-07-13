@@ -305,9 +305,8 @@
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.04em;
-            text-decoration: none;
-            cursor: grab;
             border: 2px solid var(--border-color);
+            cursor: pointer;
             transition: background-color 0.2s ease;
             white-space: nowrap;
         }
@@ -720,9 +719,9 @@
                 <div class="bm-callout">
                     <div class="bm-callout-body">
                         <span class="bm-eyebrow">SPA / JS-сайт</span>
-                        <p>Сложное приложение (Vue / React) не рендерится в песочнице? Перетащи кнопку на панель закладок браузера, открой нужный сайт и нажми её — получишь точный <code>design.md</code> по реальным вычисленным стилям, прямо с origin сайта.</p>
+                        <p>Сложное приложение (Vue / React) не рендерится в песочнице? Скопируй сниппет, открой нужный сайт, вставь в консоль (F12 → Console) и нажми Enter — получишь точный <code>design.md</code> по реальным вычисленным стилям.</p>
                     </div>
-                    <a id="bmLink" class="bm-btn" href="javascript:void(0)" draggable="true" onclick="alert('Перетащите эту кнопку на панель закладок браузера. Затем откройте нужный сайт и нажмите закладку.'); return false;">Design Tokens ⇱</a>
+                    <button id="bmCopyBtn" class="bm-btn">Копировать сниппет ⇱</button>
                 </div>
 
                 <!-- Compact Bento grid of features -->
@@ -1072,10 +1071,21 @@ function grabTokens() {
     document.body.appendChild(dl); dl.click(); dl.remove();
 }
 
-// Wire the draggable bookmarklet link (encode to survive as a javascript: URL)
+// Wire the "Copy snippet" button — paste into target site's console
 (function () {
-    var bm = document.getElementById('bmLink');
-    if (bm) bm.setAttribute('href', 'javascript:' + encodeURIComponent('(' + grabTokens.toString() + ')();void 0'));
+    var bm = document.getElementById('bmCopyBtn');
+    if (bm) {
+        bm.addEventListener('click', function () {
+            var snippet = '(' + grabTokens.toString() + ')();void 0;';
+            navigator.clipboard.writeText(snippet).then(function () {
+                bm.textContent = 'Скопировано!';
+                bm.style.background = 'var(--accent-color)';
+                setTimeout(function () { bm.textContent = 'Копировать сниппет ⇱'; bm.style.background = ''; }, 2000);
+            }).catch(function () {
+                alert('Не удалось скопировать. Попробуйте вручную.');
+            });
+        });
+    }
 })();
 
 analyzeBtn.addEventListener('click', async () => {
@@ -1218,10 +1228,17 @@ function isIconFont(name) {
 
 function extractCSSVars(textData) {
     const vars = {};
-    const rootBlockRegex = /:root\s*\{([^}]+)\}/gi;
-    let match;
-    while ((match = rootBlockRegex.exec(textData)) !== null) {
-        const body = match[1];
+    const rootRe = /:root\s*\{/gi;
+    let m;
+    while ((m = rootRe.exec(textData)) !== null) {
+        let depth = 1, pos = m.index + m[0].length;
+        while (pos < textData.length && depth > 0) {
+            if (textData[pos] === '{') depth++;
+            else if (textData[pos] === '}') depth--;
+            pos++;
+        }
+        // body between { and matched }
+        const body = textData.slice(m.index + m[0].length - 1, pos - 1);
         const varRegex = /--([\w-]+)\s*:\s*([^;]+);/g;
         let vm;
         while ((vm = varRegex.exec(body)) !== null) {
