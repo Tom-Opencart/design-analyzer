@@ -796,23 +796,29 @@ const loadingPhases = [
 
 async function fetchWithProxies(targetUrl) {
     const enc = encodeURIComponent(targetUrl);
+    // Only currently-working public CORS proxies. Removed dead ones:
+    //   webcache.googleusercontent.com — Google Cache retired in 2024
+    //   thingproxy.freeboard.io — defunct / persistently down
     const proxies = [
-        { url: 'https://corsproxy.io/?' + enc },
-        { url: 'https://api.allorigins.win/raw?url=' + enc },
-        { url: 'https://api.codetabs.com/v1/proxy?quest=' + enc },
-        { url: 'https://cors.eu.org/?' + enc },
-        { url: 'https://thingproxy.freeboard.io/fetch/' + targetUrl },
-        { url: 'https://webcache.googleusercontent.com/search?q=cache:' + targetUrl }
+        { name: 'corsproxy.io',  url: 'https://corsproxy.io/?' + enc },
+        { name: 'allorigins',    url: 'https://api.allorigins.win/raw?url=' + enc },
+        { name: 'codetabs',      url: 'https://api.codetabs.com/v1/proxy?quest=' + enc },
+        { name: 'cors.eu.org',   url: 'https://cors.eu.org/?' + enc }
     ];
+    let lastErr = 'unknown';
     for (const p of proxies) {
         try {
-            const response = await fetch(p.url, { signal: AbortSignal.timeout(15000) });
-            if (!response.ok) continue;
+            const response = await fetch(p.url, { signal: AbortSignal.timeout(12000) });
+            if (!response.ok) { lastErr = 'HTTP ' + response.status; console.warn('[proxy] ' + p.name + ' → ' + lastErr); continue; }
             const html = await response.text();
             if (html && html.length > 100) return html;
-        } catch (e) {}
+            lastErr = 'empty response'; console.warn('[proxy] ' + p.name + ' → empty');
+        } catch (e) {
+            lastErr = (e && e.name === 'TimeoutError') ? 'timeout' : ((e && e.message) || 'network error');
+            console.warn('[proxy] ' + p.name + ' → ' + lastErr);
+        }
     }
-    throw new Error('All proxies failed');
+    throw new Error('Не удалось загрузить страницу: все CORS-прокси недоступны (последняя ошибка: ' + lastErr + '). Возможно, сайт блокирует прокси, недоступен или требует авторизации.');
 }
 
 // Deep render: run the target's JS inside a same-origin <iframe srcdoc> and read real computed
