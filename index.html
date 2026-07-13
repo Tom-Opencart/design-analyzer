@@ -834,7 +834,10 @@ async function renderAndHarvest(targetUrl, shellHtml, settleMs) {
         const iframe = document.createElement('iframe');
         iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin');
         iframe.setAttribute('referrerpolicy', 'no-referrer');
-        iframe.style.cssText = 'position:absolute;left:-99999px;top:0;width:1366px;height:2200px;border:0;visibility:hidden;';
+        // On-screen but invisible: offscreen / visibility:hidden iframes get their rendering,
+        // rAF and timers throttled, so the target SPA barely hydrates. Keep it in-viewport,
+        // transparent, behind everything, non-interactive — then remove after harvest.
+        iframe.style.cssText = 'position:fixed;left:0;top:0;width:1280px;height:900px;border:0;opacity:0.01;pointer-events:none;z-index:-2147483647;';
         let done = false, hardTimer = null, quietTimer = null, observer = null;
         function finish(result) {
             if (done) return; done = true;
