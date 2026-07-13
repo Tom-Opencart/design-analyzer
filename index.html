@@ -1013,95 +1013,236 @@ function extractCSSProps(textData) {
     return rules;
 }
 
+// Parse every non-at style rule into { selector, body } (mirrors extractCSSProps at-rule skipping)
+function extractStyleRules(textData) {
+    const rules = [];
+    let pos = 0;
+    const len = textData.length;
+    const MAX_RULES = 4000;
+    try {
+        while (pos < len && rules.length < MAX_RULES) {
+            const openBrace = textData.indexOf('{', pos);
+            if (openBrace === -1) break;
+            const closeBrace = textData.indexOf('}', openBrace + 1);
+            if (closeBrace === -1) break;
+            const selector = textData.substring(pos, openBrace).trim();
+            const body = textData.substring(openBrace + 1, closeBrace);
+            pos = closeBrace + 1;
+            if (!selector || !body) continue;
+            const low = selector.toLowerCase();
+            if (low.startsWith('@media') || low.startsWith('@keyframes') || low.startsWith('@font-face') || low.startsWith('@supports') || low.startsWith('@layer')) {
+                let depth = 1;
+                while (pos < len && depth > 0) {
+                    const c = textData[pos];
+                    if (c === '{') depth++;
+                    else if (c === '}') depth--;
+                    pos++;
+                }
+                continue;
+            }
+            rules.push({ selector, body });
+        }
+    } catch (e) {}
+    return rules;
+}
+
+// How many REAL elements a (possibly grouped) selector applies to, on the parsed doc.
+// Pseudo-elements / volatile pseudo-classes are stripped so querySelectorAll doesn't throw or under-count.
+function selectorReach(doc, selector) {
+    let total = 0;
+    selector.split(',').forEach(function (sel) {
+        let s = sel.trim();
+        if (!s) return;
+        s = s.replace(/::[a-z-]+/gi, '')
+             .replace(/:(hover|focus|active|visited|focus-within|focus-visible|target|checked|disabled|enabled|link|any-link|first-child|last-child|nth-child\([^)]*\)|not\([^)]*\))/gi, '')
+             .trim();
+        if (!s) return;
+        try { total += doc.querySelectorAll(s).length; } catch (e) {}
+    });
+    return total;
+}
+
+// First color token inside a declaration value; resolves var(--x) via :root vars.
+function firstColorToken(val, cssVars) {
+    if (!val) return null;
+    val = val.trim();
+    const vm = val.match(/var\(\s*--([\w-]+)/);
+    if (vm && cssVars && cssVars[vm[1]] !== undefined) val = String(cssVars[vm[1]]);
+    let m = val.match(/#[0-9a-fA-F]{3,8}\b/);
+    if (m) return parseColorToHex(m[0]);
+    m = val.match(/rgba?\([^)]+\)/i);
+    if (m) return parseColorToHex(m[0]);
+    return null;
+}
+
 function analyzeData(url, doc, textData) {
     const title = doc.querySelector('title')?.textContent?.trim() || new URL(url).hostname;
     currentDomain = new URL(url).hostname.replace(/^www\./, '');
     domainBase = currentDomain.split('.')[0];
     document.getElementById('resultTitle').textContent = currentDomain + ' → design.md';
 
-    // -- COLORS --
+    // -- COLORS (element-anchored, reach-weighted) --
+    // Instead of counting hex occurrences in raw CSS text (which over-weights a single
+    // vivid CTA), we weight every colour by how many REAL elements the CSS rule applies to
+    // (doc.querySelectorAll on the parsed DOM) + inline styles, resolving var(--x).
     const cssVars = extractCSSVars(textData);
 
-    const colorRegex = /#(?:[0-9a-fA-F]{3}){1,2}\b/g;
-    const allHex = (textData.match(colorRegex) || []).map(c => { 
-        let h = c.toLowerCase(); 
-        if (h.length === 4) h = '#'+h[1]+h[1]+h[2]+h[2]+h[3]+h[3]; 
-        return h; 
-    }).filter(h => /^#[0-9a-f]{6}$/.test(h));
-
-    const rgbaRegex = /rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/g;
-    let rm;
-    while ((rm = rgbaRegex.exec(textData)) !== null) {
-        const r = parseInt(rm[1]), g = parseInt(rm[2]), b = parseInt(rm[3]);
-        const hex = '#' + ((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1);
-        allHex.push(hex);
+    function colorDist(a, b) {
+        const ca = hexToRgb(a), cb = hexToRgb(b);
+        return Math.abs(ca.r-cb.r) + Math.abs(ca.g-cb.g) + Math.abs(ca.b-cb.b);
+    }
+    function chromaOf(hex) {
+        const {r,g,b} = hexToRgb(hex);
+        const max = Math.max(r,g,b), min = Math.min(r,g,b);
+        return max === 0 ? 0 : (max-min)/max;
     }
 
-    const rawCounts = {}; 
-    allHex.forEach(c => rawCounts[c] = (rawCounts[c]||0)+1);
-    function colorDist(a, b) { 
-        const ca = hexToRgb(a), cb = hexToRgb(b); 
-        return Math.abs(ca.r-cb.r) + Math.abs(ca.g-cb.g) + Math.abs(ca.b-cb.b); 
+    // Standard structural elements → role anchors. Each color declaration's weight = element reach.
+    const COLOR_DECL_RE = /(background(?:-color)?|border(?:-(?:top|right|bottom|left))?(?:-color)?|border|color|fill|stroke|outline(?:-color)?)\s*:\s*([^;{}]+)/gi;
+    const colorWeight = {};            // hex -> total element reach (structural frequency)
+    const bgSet = new Set(), txtSet = new Set(), brdSet = new Set();
+    const roleColors = { canvas: {}, ink: {}, surface: {}, link: {}, buttonBg: {}, buttonText: {}, fieldBg: {}, fieldBorder: {}, hairline: {} };
+    function bump(bag, hex, w) { if (hex) bag[hex] = (bag[hex] || 0) + w; }
+
+    function isTag(sel, tag) { return new RegExp('(^|[\\s,>+~(])' + tag + '($|[\\s,>+~.:#\\[)])', 'i').test(sel); }
+    function selHasAny(sel, subs) { return subs.some(s => sel.indexOf(s) !== -1); }
+
+    const styleRules = extractStyleRules(textData);
+    styleRules.forEach(function (rule) {
+        const reach = selectorReach(doc, rule.selector);
+        if (reach <= 0) return; // only colours actually painted on real elements
+        const sel = rule.selector.toLowerCase();
+        const isBody   = isTag(sel, 'body') || isTag(sel, 'html');
+        const isHeadEl = ['header','nav','footer','section','main','aside'].some(t => isTag(sel, t)) || selHasAny(sel, ['card','panel','surface','box']);
+        const isLink   = isTag(sel, 'a');
+        const isBtn    = isTag(sel, 'button') || selHasAny(sel, ['btn', 'button', 'cta']) || /\[type=["']?(submit|button)/.test(sel);
+        const isField  = isTag(sel, 'input') || isTag(sel, 'textarea') || isTag(sel, 'select') || selHasAny(sel, ['form-control','field','input']);
+        const isHead   = /(^|[\s,>+~])h[1-6]\b/.test(sel);
+        let cm; const re = new RegExp(COLOR_DECL_RE.source, 'gi');
+        while ((cm = re.exec(rule.body)) !== null) {
+            const prop = cm[1].toLowerCase();
+            const hex = firstColorToken(cm[2], cssVars);
+            if (!hex) continue;
+            colorWeight[hex] = (colorWeight[hex] || 0) + reach;
+            const isBg = prop.indexOf('background') === 0;
+            const isBorder = prop.indexOf('border') === 0 || prop.indexOf('outline') === 0;
+            const isText = prop === 'color' || prop === 'fill' || prop === 'stroke';
+            if (isBg) bgSet.add(hex);
+            if (isText) txtSet.add(hex);
+            if (isBorder) brdSet.add(hex);
+            // role anchoring
+            if (isBody && isBg) bump(roleColors.canvas, hex, reach);
+            if (isBody && isText) bump(roleColors.ink, hex, reach);
+            if (isHeadEl && isBg) bump(roleColors.surface, hex, reach);
+            if (isLink && isText) bump(roleColors.link, hex, reach);
+            if (isBtn && isBg) bump(roleColors.buttonBg, hex, reach);
+            if (isBtn && isText) bump(roleColors.buttonText, hex, reach);
+            if (isField && isBg) bump(roleColors.fieldBg, hex, reach);
+            if (isField && isBorder) bump(roleColors.fieldBorder, hex, reach);
+            if (isHead && isText) bump(roleColors.ink, hex, reach);
+            if (isBorder) bump(roleColors.hairline, hex, reach);
+        }
+    });
+
+    // Inline styles on real elements (weight 1 each)
+    try {
+        doc.querySelectorAll('[style]').forEach(function (el) {
+            const st = el.getAttribute('style') || '';
+            let cm; const re = new RegExp(COLOR_DECL_RE.source, 'gi');
+            while ((cm = re.exec(st)) !== null) {
+                const prop = cm[1].toLowerCase();
+                const hex = firstColorToken(cm[2], cssVars);
+                if (!hex) continue;
+                colorWeight[hex] = (colorWeight[hex] || 0) + 1;
+                if (prop.indexOf('background') === 0) bgSet.add(hex);
+                else if (prop === 'color') txtSet.add(hex);
+                else if (prop.indexOf('border') === 0) brdSet.add(hex);
+            }
+        });
+    } catch (e) {}
+
+    // Fallback: if the DOM yielded nothing (empty SPA shell), count raw hex occurrences in text
+    let rawCounts = colorWeight;
+    if (Object.keys(colorWeight).length === 0) {
+        const fb = {};
+        const colorRegex = /#(?:[0-9a-fA-F]{3}){1,2}\b/g;
+        (textData.match(colorRegex) || []).forEach(c => {
+            let h = c.toLowerCase();
+            if (h.length === 4) h = '#'+h[1]+h[1]+h[2]+h[2]+h[3]+h[3];
+            if (/^#[0-9a-f]{6}$/.test(h)) fb[h] = (fb[h] || 0) + 1;
+        });
+        rawCounts = fb;
     }
+
+    // Merge near-duplicate colours (keep highest-weight key), sort by reach
     const merged = {};
-    Object.entries(rawCounts).sort((a,b)=>b[1]-a[1]).forEach(([hex, count]) => { 
-        let key = null; 
-        for (const k of Object.keys(merged)) { 
-            if (colorDist(hex, k) < 30) { 
-                key = k; 
-                break; 
-            } 
-        } 
-        if (key) merged[key] += count; 
-        else merged[hex] = count; 
+    Object.entries(rawCounts).sort((a,b)=>b[1]-a[1]).forEach(([hex, count]) => {
+        let key = null;
+        for (const k of Object.keys(merged)) { if (colorDist(hex, k) < 30) { key = k; break; } }
+        if (key) merged[key] += count; else merged[hex] = count;
     });
     const finalColors = Object.entries(merged).sort((a,b)=>b[1]-a[1]);
 
-    const cssVarColors = {};
-    Object.entries(cssVars).forEach(([name, val]) => {
-        const hex = parseColorToHex(val);
-        if (hex && /^#[0-9a-f]{6}$/.test(hex)) cssVarColors[name] = hex;
-    });
-
-    const bgSet = new Set(), txtSet = new Set(), brdSet = new Set(); 
-    let m;
-    const bgR = /background(?:-color)?\s*:\s*(#[0-9a-f]{6}|rgba?\([^)]+\))/gi; 
-    while ((m = bgR.exec(textData)) !== null) { 
-        const h = parseColorToHex(m[1]); 
-        if (h) bgSet.add(h); 
-    }
-    const txR = /(?:^|;)\s*color\s*:\s*(#[0-9a-f]{6}|rgba?\([^)]+\))/gim; 
-    while ((m = txR.exec(textData)) !== null) { 
-        const h = parseColorToHex(m[1]); 
-        if (h) txtSet.add(h); 
-    }
-    const brR = /border[^:]*:\s*[^;]*(#[0-9a-f]{6}|rgba?\([^)]+\))/gi; 
-    while ((m = brR.exec(textData)) !== null) { 
-        const h = parseColorToHex(m[1]); 
-        if (h) brdSet.add(h); 
-    }
-
-    const canvasCandidate = finalColors.find(([h]) => h === '#ffffff' || h === '#000000');
-    const canvasHex = canvasCandidate ? canvasCandidate[0] : (finalColors.length > 0 ? finalColors[0][0] : '#ffffff');
+    // Canvas: prefer the colour actually anchored to <body>/<html> background
+    function topOf(bag) { const e = Object.entries(bag).sort((a,b)=>b[1]-a[1]); return e.length ? e[0][0] : null; }
+    const canvasHex = topOf(roleColors.canvas)
+        || (finalColors.find(([h]) => h === '#ffffff' || h === '#000000') || [])[0]
+        || (finalColors.length > 0 ? finalColors[0][0] : '#ffffff');
     const canvasLum = luminance(...Object.values(hexToRgb(canvasHex)));
     const isDark = canvasLum < 0.1;
 
-    const accentColorsRaw = finalColors.filter(([hex]) => { 
-        const l = luminance(...Object.values(hexToRgb(hex))); 
-        const {r,g,b} = hexToRgb(hex); 
-        const max = Math.max(r,g,b), min = Math.min(r,g,b); 
-        const s = max === 0 ? 0 : (max-min)/max; 
-        return s > 0.15 && l > 0.08 && l < 0.92 && hex !== canvasHex && (bgSet.has(hex) || txtSet.has(hex) || brdSet.has(hex)); 
-    }).slice(0, 7);
-    
+    // Chromatic candidates, ranked by element reach (not by text-frequency or saturation)
+    const REACH_FLOOR = 2; // must touch >= 2 elements to qualify as a brand/accent colour
+    const chromaticAll = finalColors.filter(([hex]) => {
+        const l = luminance(...Object.values(hexToRgb(hex)));
+        return chromaOf(hex) > 0.15 && l > 0.06 && l < 0.94 && hex !== canvasHex;
+    });
     const seenLabels = new Set();
-    const accentColors = accentColorsRaw.filter(([hex]) => !seenLabels.has(colorLabel(hex)) && seenLabels.add(colorLabel(hex)));
+    const chromaticUniq = chromaticAll.filter(([hex]) => {
+        const lb = colorLabel(hex);
+        if (seenLabels.has(lb)) return false;
+        seenLabels.add(lb); return true;
+    });
+    // High-reach → real accents; single-element (e.g. one CTA) → demoted to rare, never primary
+    const accentColors = chromaticUniq.filter(([, w]) => w >= REACH_FLOOR).slice(0, 7);
+    const rareAccents  = chromaticUniq.filter(([, w]) => w < REACH_FLOOR).slice(0, 6);
 
-    const primaryHex = accentColors.length > 0 ? accentColors[0][0] : (finalColors.find(([h]) => h !== canvasHex && txtSet.has(h)) || finalColors.find(([h]) => h !== canvasHex) || ['#1a1a1a'])[0];
+    const primaryHex = accentColors.length > 0
+        ? accentColors[0][0]
+        : (finalColors.find(([h]) => h !== canvasHex && txtSet.has(h)) || finalColors.find(([h]) => h !== canvasHex) || ['#1a1a1a'])[0];
+
+    // -- SPA / client-rendered detection --
+    // Static fetch can't execute JS, so JS-rendered sites arrive as a near-empty shell and any
+    // token output is unreliable. Warn loudly instead of pretending the result is trustworthy.
+    let spaWarning = '';
+    try {
+        const totalEls = doc.querySelectorAll('*').length;
+        const bodyEls = doc.body ? doc.body.querySelectorAll('*').length : 0;
+        const mount = doc.querySelector('#app,#root,#__next,#__nuxt,[data-reactroot],[data-server-rendered],[ng-version]');
+        const frameworkBundle = /chunk-vendors|runtime~|webpackjsonp|window\.__nuxt__|__next_data__|data-reactroot|ng-version|vue(?:\.runtime)?(?:\.min)?\.js|react-dom|_next\/static|_nuxt\//i.test(textData);
+        const maxReach = finalColors.length ? finalColors[0][1] : 0;
+        const cssHeavyDomEmpty = textData.length > 60000 && totalEls < 60; // big CSS bundle, tiny DOM
+        const isSpa = (bodyEls < 8 && (mount || frameworkBundle)) || bodyEls < 4 || (cssHeavyDomEmpty && maxReach <= 4);
+        if (isSpa) {
+            spaWarning =
+                '> ⚠️ **Client-rendered site detected — results are UNRELIABLE.**\n' +
+                '>\n' +
+                '> The fetched HTML is a near-empty shell (' + bodyEls + ' body element' + (bodyEls === 1 ? '' : 's') + '' +
+                (frameworkBundle ? ', framework bundle present' : '') + (mount ? ', JS mount point found' : '') + '). ' +
+                'This page builds its real DOM and applies its theme colours with JavaScript in the browser, so a ' +
+                'static fetch cannot see them. Colours/typography below are extracted only from whatever static CSS ' +
+                'shipped — they may miss the actual brand palette entirely.\n' +
+                '>\n' +
+                '> **To analyse this site correctly, capture a rendered snapshot** (headless browser + `getComputedStyle`) ' +
+                'and feed that HTML instead.\n\n';
+        }
+    } catch (e) {}
 
     const surfaceColors = finalColors.filter(([hex]) => { 
         const l = luminance(...Object.values(hexToRgb(hex))); 
-        return hex === '#ffffff' || hex === '#000000' || (l > 0.85 && l < 0.99 && !txtSet.has(hex)) || (l > 0.01 && l < 0.12 && hex !== canvasHex); 
+        // A surface must actually be painted as a background somewhere (element-anchored), not a text-only colour
+        if (hex !== canvasHex && !bgSet.has(hex)) return false;
+        return hex === canvasHex || (l > 0.85 && l < 0.995 && !txtSet.has(hex)) || (l > 0.01 && l < 0.14); 
     }).slice(0, 5);
     
     const textColors = finalColors.filter(([hex]) => { 
@@ -1745,6 +1886,8 @@ function analyzeData(url, doc, textData) {
 
     md += '---\n\n';
 
+    if (spaWarning) md += spaWarning;
+
     // ===== PROSE SECTIONS =====
 
     // -- Overview --
@@ -1793,10 +1936,22 @@ function analyzeData(url, doc, textData) {
     // -- Colors --
     md += '## Colors\n\n';
     md += '### Brand & Accent\n';
-    if (primaryHex) {
-        const count = accentColors.length > 0 ? accentColors[0][1] : 0;
-        md += '- **Primary** (`{colors.primary}` — `' + primaryHex + '`): CTA fills, links, interactive highlights. ' + count + ' occurrences.\n';
-    } else md += '- No distinct accent colors detected\n';
+    if (accentColors.length > 0) {
+        md += '- **Primary** (`{colors.primary}` — `' + primaryHex + '`): dominant brand colour (highest element reach) — CTA fills, key UI. Applied to ~' + accentColors[0][1] + ' element' + (accentColors[0][1] === 1 ? '' : 's') + '.\n';
+        accentColors.slice(1).forEach((c, i) => {
+            md += '- **Accent ' + (i + 1) + '** (`{colors.accent-' + (i + 1) + '}` — `' + c[0] + '`): ' + colorLabel(c[0]).toLowerCase() + ', secondary accent. ~' + c[1] + ' elements.\n';
+        });
+    } else if (primaryHex) {
+        md += '- **Primary** (`{colors.primary}` — `' + primaryHex + '`): inferred — no chromatic colour reached ' + REACH_FLOOR + '+ elements.\n';
+    } else {
+        md += '- No distinct accent colours detected\n';
+    }
+    if (rareAccents.length > 0) {
+        md += '\n_Rare accents — single-element usage (e.g. one CTA button); deliberately NOT promoted to primary:_\n';
+        rareAccents.forEach(c => {
+            md += '- `' + c[0] + '` — ' + colorLabel(c[0]).toLowerCase() + ', ~' + c[1] + ' element' + (c[1] === 1 ? '' : 's') + '\n';
+        });
+    }
 
     md += '\n### Surface\n';
     md += '- **Canvas** (`{colors.canvas}` — `' + canvasHex + '`): Page floor.\n';
