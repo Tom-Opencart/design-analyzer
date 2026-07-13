@@ -261,6 +261,58 @@
             cursor: not-allowed; 
         }
 
+        /* Bookmarklet callout — accurate path for JS-rendered SPA sites */
+        .bm-callout {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1.25rem;
+            margin-top: 0.85rem;
+            padding: 0.85rem 1rem;
+            border: 1px solid var(--border-muted);
+            background: var(--surface-color);
+        }
+        .bm-callout-body { flex: 1; }
+        .bm-eyebrow {
+            display: inline-block;
+            font-family: var(--font-mono);
+            font-size: 0.62rem;
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: var(--accent-color);
+            margin-bottom: 0.35rem;
+        }
+        .bm-callout-body p {
+            font-size: 0.78rem;
+            line-height: 1.5;
+            color: var(--text-secondary);
+        }
+        .bm-callout-body code {
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            background: var(--border-muted);
+            padding: 0.05rem 0.3rem;
+            color: var(--text-primary);
+        }
+        .bm-btn {
+            flex: none;
+            padding: 0.7rem 1.1rem;
+            background-color: var(--border-color);
+            color: #ffffff;
+            font-family: var(--font-mono);
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            text-decoration: none;
+            cursor: grab;
+            border: 2px solid var(--border-color);
+            transition: background-color 0.2s ease;
+            white-space: nowrap;
+        }
+        .bm-btn:hover { background-color: var(--accent-color); border-color: var(--accent-color); }
+
         /* Compact Bento Grid (Row layout to save height) */
         .features-grid {
             display: grid;
@@ -665,6 +717,14 @@
                     </button>
                 </div>
 
+                <div class="bm-callout">
+                    <div class="bm-callout-body">
+                        <span class="bm-eyebrow">SPA / JS-сайт</span>
+                        <p>Сложное приложение (Vue / React) не рендерится в песочнице? Перетащи кнопку на панель закладок браузера, открой нужный сайт и нажми её — получишь точный <code>design.md</code> по реальным вычисленным стилям, прямо с origin сайта.</p>
+                    </div>
+                    <a id="bmLink" class="bm-btn" href="javascript:void(0)" draggable="true" onclick="alert('Перетащите эту кнопку на панель закладок браузера. Затем откройте нужный сайт и нажмите закладку.'); return false;">Design Tokens ⇱</a>
+                </div>
+
                 <!-- Compact Bento grid of features -->
                 <div class="features-grid">
                     <div class="feature-card">
@@ -914,7 +974,7 @@ async function renderAndHarvest(targetUrl, shellHtml, settleMs) {
                 const style = '<style>' + anchor.join('\n') + '\n' + perRules.join('\n') + '\n' + mbg.css + mtx.css + mbd.css + '</style>';
                 const markerHtml = '<div style="display:none">' + mbg.html + mtx.html + mbd.html + '</div>';
                 const outDoc = new DOMParser().parseFromString(renderedHtml + markerHtml + style, 'text/html');
-                finish({ doc: outDoc, textData: renderedHtml + '\n' + style + '\n' + markerHtml });
+                finish({ doc: outDoc, textData: renderedHtml + '\n' + style + '\n' + markerHtml, els: n });
             } catch (e) { finish(null); }
         }
         iframe.addEventListener('load', () => {
@@ -958,6 +1018,66 @@ async function renderAndHarvest(targetUrl, shellHtml, settleMs) {
     });
 }
 
+// Self-contained token harvester for the bookmarklet. Runs on the TARGET site itself
+// (real origin, full render) and downloads a measured design.md from getComputedStyle.
+// Must stay self-contained (no closure refs) — it is serialised via toString().
+function grabTokens() {
+    var rgbToHex = function (c) {
+        var m = c && c.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+        if (!m) return null;
+        return '#' + [m[1], m[2], m[3]].map(function (x) { return (+x).toString(16).padStart(2, '0'); }).join('');
+    };
+    var chroma = function (hex) { var n = parseInt(hex.slice(1), 16), r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255, mx = Math.max(r, g, b), mn = Math.min(r, g, b); return mx === 0 ? 0 : (mx - mn) / mx; };
+    var bgA = {}, txA = {}, bdA = {}, weights = {}, sizes = {}, radii = {}, shadows = {}, spacing = {};
+    var fontStack = '', els = document.querySelectorAll('body *');
+    for (var i = 0; i < els.length; i++) {
+        var el = els[i], r = el.getBoundingClientRect(), a = Math.max(0, r.width) * Math.max(0, r.height);
+        if (a < 4) continue;
+        var cs = getComputedStyle(el);
+        if (cs.display === 'none' || cs.visibility === 'hidden' || +cs.opacity === 0) continue;
+        if (cs.backgroundColor && cs.backgroundColor !== 'rgba(0, 0, 0, 0)') { var bg = rgbToHex(cs.backgroundColor); if (bg) bgA[bg] = (bgA[bg] || 0) + a; }
+        var hasText = false, cnodes = el.childNodes;
+        for (var j = 0; j < cnodes.length; j++) { if (cnodes[j].nodeType === 3 && cnodes[j].textContent.trim()) { hasText = true; break; } }
+        if (hasText) { var tc = rgbToHex(cs.color); if (tc) txA[tc] = (txA[tc] || 0) + a; }
+        var bw = parseFloat(cs.borderTopWidth) || 0;
+        if (bw > 0) { var bc = rgbToHex(cs.borderTopColor); if (bc) bdA[bc] = (bdA[bc] || 0) + Math.max(r.width, r.height); }
+        var ff = (cs.fontFamily || '').split(',')[0].replace(/["']/g, '').trim(); if (ff && !fontStack) fontStack = cs.fontFamily;
+        var fsz = Math.round(parseFloat(cs.fontSize) || 0);
+        if (fsz) { var key = fsz + '|' + cs.fontWeight; sizes[key] = (sizes[key] || 0) + a; }
+        if (cs.fontWeight) weights[cs.fontWeight] = 1;
+        var br = Math.round(parseFloat(cs.borderTopLeftRadius) || 0); if (br > 0) radii[br] = (radii[br] || 0) + 1;
+        if (cs.boxShadow && cs.boxShadow !== 'none') shadows[cs.boxShadow] = (shadows[cs.boxShadow] || 0) + 1;
+        var pt = Math.round(parseFloat(cs.paddingTop) || 0); if (pt > 0) spacing[pt] = (spacing[pt] || 0) + 1;
+    }
+    var sortA = function (o) { return Object.keys(o).map(function (k) { return [k, o[k]]; }).sort(function (x, y) { return y[1] - x[1]; }); };
+    var bg = sortA(bgA), tx = sortA(txA), bd = sortA(bdA);
+    var canvas = bg.length ? bg[0][0] : '#ffffff';
+    var ink = tx.length ? tx[0][0] : '#000000';
+    var chrom = bg.filter(function (e) { return chroma(e[0]) > 0.15 && e[0] !== canvas; });
+    var primary = chrom.length ? chrom[0][0] : (bg[1] ? bg[1][0] : ink);
+    var md = '---\nname: "' + (document.title || location.hostname).replace(/"/g, "'") + '"\nsource: "' + location.href + '"\ntool: "design-analyzer bookmarklet - real getComputedStyle at origin"\nelements_analyzed: ' + els.length + '\n---\n\n';
+    md += '## Colors (area-weighted, measured)\n';
+    md += '- **Canvas:** `' + canvas + '`\n- **Ink (text):** `' + ink + '`\n- **Primary / brand:** `' + primary + '`\n';
+    chrom.slice(0, 6).forEach(function (e, i2) { md += '- Accent ' + (i2 + 1) + ': `' + e[0] + '`\n'; });
+    md += '\n### Backgrounds by area\n'; bg.slice(0, 10).forEach(function (e) { md += '- `' + e[0] + '` - ' + Math.round(e[1]) + '\n'; });
+    md += '\n### Text colours by area\n'; tx.slice(0, 6).forEach(function (e) { md += '- `' + e[0] + '` - ' + Math.round(e[1]) + '\n'; });
+    if (bd.length) { md += '\n### Border colours\n'; bd.slice(0, 5).forEach(function (e) { md += '- `' + e[0] + '`\n'; }); }
+    md += '\n## Typography\n- Primary stack: `' + fontStack + '`\n- Weights: ' + Object.keys(weights).sort().join(', ') + '\n\n### Sizes by area (px, weight)\n';
+    sortA(sizes).slice(0, 12).forEach(function (e) { md += '- ' + e[0].replace('|', 'px, w') + '\n'; });
+    md += '\n## Radius (by frequency)\n'; sortA(radii).slice(0, 8).forEach(function (e) { md += '- ' + e[0] + 'px x' + e[1] + '\n'; });
+    if (Object.keys(shadows).length) { md += '\n## Shadows\n'; sortA(shadows).slice(0, 6).forEach(function (e) { md += '- `' + e[0] + '`\n'; }); }
+    md += '\n## Spacing (px, by frequency)\n' + sortA(spacing).slice(0, 12).map(function (e) { return e[0] + 'px'; }).join(' - ') + '\n';
+    var blob = new Blob([md], { type: 'text/markdown' });
+    var dl = document.createElement('a'); dl.href = URL.createObjectURL(blob); dl.download = (location.hostname || 'design') + '_design.md';
+    document.body.appendChild(dl); dl.click(); dl.remove();
+}
+
+// Wire the draggable bookmarklet link (encode to survive as a javascript: URL)
+(function () {
+    var bm = document.getElementById('bmLink');
+    if (bm) bm.setAttribute('href', 'javascript:' + encodeURIComponent('(' + grabTokens.toString() + ')();void 0'));
+})();
+
 analyzeBtn.addEventListener('click', async () => {
     let url = urlInput.value.trim();
     if (!url) return alert('Введите URL для анализа');
@@ -996,7 +1116,7 @@ analyzeBtn.addEventListener('click', async () => {
         let rendered = null;
         try { rendered = await renderAndHarvest(url, html, looksSpa ? 1600 : 500); } catch (e) { rendered = null; }
         if (rendered) {
-            currentMarkdown = analyzeData(url, rendered.doc, rendered.textData, { rendered: true });
+            currentMarkdown = analyzeData(url, rendered.doc, rendered.textData, { rendered: true, renderedEls: rendered.els });
         } else {
             const doc = new DOMParser().parseFromString(html, 'text/html');
             const stylesheets = Array.from(doc.querySelectorAll('link[rel="stylesheet"]')).slice(0, 5);
@@ -1386,7 +1506,23 @@ function analyzeData(url, doc, textData, opts) {
         const cssHeavyDomEmpty = textData.length > 60000 && totalEls < 60; // big CSS bundle, tiny DOM
         const isSpa = (bodyEls < 8 && (mount || frameworkBundle)) || bodyEls < 4 || (cssHeavyDomEmpty && maxReach <= 4);
         if (opts.rendered) {
-            spaWarning = '> ✅ **Rendered in-browser.** The page\u2019s JavaScript was executed and tokens below were read from real computed styles (`getComputedStyle`), not static CSS text.\n\n';
+            const els = typeof opts.renderedEls === 'number' ? opts.renderedEls : null;
+            // A bundled SPA that fails to bootstrap in an off-origin iframe renders only a tiny
+            // shell (~10-20 elements). Detect that and be honest instead of showing a green tick.
+            if (frameworkBundle && els !== null && els < 60) {
+                spaWarning =
+                    '> ⚠️ **The app did NOT fully render in the sandbox — results are PARTIAL.**\n' +
+                    '>\n' +
+                    '> Only ' + els + ' elements hydrated. This is a bundled SPA (Vue / React / etc.) that will not ' +
+                    'bootstrap correctly inside an off-origin iframe (its chunk paths / router break on an ' +
+                    '`about:srcdoc` / `blob:` location), so most of the real page — and its brand colours — never ' +
+                    'appeared. The tokens below reflect only the shell.\n' +
+                    '>\n' +
+                    '> **For an accurate result use the bookmarklet** (see the tool page): open the target site ' +
+                    'directly and click it — it reads real `getComputedStyle` at the site\u2019s own origin.\n\n';
+            } else {
+                spaWarning = '> ✅ **Rendered in-browser.** The page\u2019s JavaScript was executed and tokens below were read from real computed styles (`getComputedStyle`), not static CSS text.' + (els !== null ? ' (' + els + ' elements)' : '') + '\n\n';
+            }
         } else {
             const deepNote = opts.deepFailed
                 ? '> ⚠️ **Deep render didn\u2019t hydrate.** The page\u2019s app failed to build its DOM inside the sandbox (its scripts or cross-origin data were blocked), so this fell back to STATIC analysis below.\n>\n'
