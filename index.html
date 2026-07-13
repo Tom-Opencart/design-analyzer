@@ -916,13 +916,40 @@ async function renderAndHarvest(targetUrl, shellHtml, settleMs) {
         }
         iframe.addEventListener('load', () => {
             try {
+                const win = iframe.contentWindow;
                 const idoc = iframe.contentDocument;
                 observer = new MutationObserver(() => { clearTimeout(quietTimer); quietTimer = setTimeout(harvest, 700); });
                 observer.observe(idoc.body || idoc.documentElement, { childList: true, subtree: true, attributes: true });
-            } catch (e) {}
-            quietTimer = setTimeout(harvest, settleMs);
+                // Step-scroll through the page to trigger IntersectionObserver / lazy-rendered
+                // sections and lazy images. Each scroll usually mutates the DOM, which resets the
+                // observer's settle timer; after reaching the bottom we return to top and harvest.
+                let y = 0;
+                const stepScroll = () => {
+                    try {
+                        const h = Math.max(
+                            idoc.body ? idoc.body.scrollHeight : 0,
+                            idoc.documentElement ? idoc.documentElement.scrollHeight : 0
+                        );
+                        win.scrollTo(0, y);
+                        y += 1400;
+                        if (y < h && y < 20000) {
+                            setTimeout(stepScroll, 220);
+                        } else {
+                            try { win.scrollTo(0, 0); } catch (e) {}
+                            clearTimeout(quietTimer);
+                            quietTimer = setTimeout(harvest, settleMs);
+                        }
+                    } catch (e) {
+                        clearTimeout(quietTimer);
+                        quietTimer = setTimeout(harvest, settleMs);
+                    }
+                };
+                setTimeout(stepScroll, 300);
+            } catch (e) {
+                quietTimer = setTimeout(harvest, settleMs);
+            }
         });
-        hardTimer = setTimeout(harvest, 9000);
+        hardTimer = setTimeout(harvest, 14000);
         try { iframe.srcdoc = html; } catch (e) { return finish(null); }
         document.body.appendChild(iframe);
     });
